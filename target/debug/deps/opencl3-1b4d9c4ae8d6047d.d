@@ -1,0 +1,14 @@
+/home/rock/repos/safe_rustcl/target/debug/deps/opencl3-1b4d9c4ae8d6047d.d: /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/lib.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/command_queue.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/context.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/device.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/event.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/kernel.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/memory.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/platform.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/program.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/svm.rs
+
+/home/rock/repos/safe_rustcl/target/debug/deps/libopencl3-1b4d9c4ae8d6047d.rmeta: /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/lib.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/command_queue.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/context.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/device.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/event.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/kernel.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/memory.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/platform.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/program.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/svm.rs
+
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/lib.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/command_queue.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/context.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/device.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/event.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/kernel.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/memory.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/platform.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/program.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/opencl3-0.7.0/src/svm.rs:
