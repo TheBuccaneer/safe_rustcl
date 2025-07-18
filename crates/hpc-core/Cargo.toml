@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 opencl3 = "0.7"
 thiserror = "1"
+bytemuck  = "1.14"
 
 [dev-dependencies]
-criterion = "0.5"
-cargo-geiger = "0.12.0"
+

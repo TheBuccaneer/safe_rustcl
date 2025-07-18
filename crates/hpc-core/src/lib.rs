@@ -1,17 +1,19 @@
 use opencl3::{
-    command_queue::{CommandQueue},
     context::Context,
     memory::{Buffer, CL_MEM_READ_WRITE},
-    event::{wait_for_events, Event},
-    types::{cl_event, CL_NON_BLOCKING, CL_BLOCKING},
+    event::{Event},
 };
 
 use std::{marker::PhantomData, ptr};
 
 
 
-pub struct Queued;
-pub struct Ready;
+mod sealed { pub trait Sealed {} }
+pub trait State: sealed::Sealed {}
+
+pub struct Queued;  impl sealed::Sealed for Queued {}  impl State for Queued {}
+pub struct InFlight;impl sealed::Sealed for InFlight {}impl State for InFlight {}
+pub struct Ready;   impl sealed::Sealed for Ready  {}  impl State for Ready  {}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ClError {
@@ -43,6 +45,8 @@ impl From<i32> for ClError {
     }
 }
 
+
+
 pub struct GpuBuffer<S> {
     buf: Buffer<u8>,
     len: usize,
@@ -65,12 +69,26 @@ impl GpuBuffer<Queued> {
 
     
     /// wartet auf GPU‑Fertigstellung und überführt in Ready‑State
-    pub fn into_ready(self, evt: cl_event) -> Result<GpuBuffer<Ready>, ClError> {
-        wait_for_events(&[evt])?;          // ⬅️ hier liegt die eigentliche Synchronisation
-        Ok(GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData })
-    }
+    //pub fn into_ready(self, evt: cl_event) -> Result<GpuBuffer<Ready>, ClError> {
+      //  wait_for_events(&[evt])?;          // ⬅️ hier liegt die eigentliche Synchronisation
+        //Ok(GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData })
+    //}
 
+   /* pub fn into_ready(self, evt: cl_event) -> Result<GpuBuffer<Ready>, ClError> {
+    // Nur warten, wenn evt != NULL
+    if !evt.is_null() {
+        wait_for_events(&[evt])?;
+    }
+    Ok(GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData })
+    */
+
+    pub fn into_ready(self, evt: Event) -> Result<GpuBuffer<Ready>, ClError> {
+    evt.wait()?;   // nutzt das OpenCL3‑Wrapper‑safe wait
+    Ok(GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData })
 }
+}
+
+
 
 impl<S> GpuBuffer<S> {
     /// Zugriff auf die interne OpenCL Buffer-Referenz
@@ -81,5 +99,32 @@ impl<S> GpuBuffer<S> {
     /// Länge des Buffers in Bytes
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    pub fn raw_mut(&mut self) -> &mut Buffer<u8> {
+        &mut self.buf
+    }
+}
+
+impl GpuBuffer<Queued> {
+    pub fn launch(self) -> GpuBuffer<InFlight> {
+        GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
+    }
+}
+
+impl GpuBuffer<InFlight> {
+    pub fn complete(self, evt: opencl3::event::Event) -> GpuBuffer<Ready> {
+        let _guard = GpuEventGuard { evt };
+        GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
+    }
+}
+
+
+pub struct GpuEventGuard {
+    evt: opencl3::event::Event,
+}
+impl Drop for GpuEventGuard {
+    fn drop(&mut self) {
+        let _ = self.evt.wait();  // blockiert bis Kernel fertig
     }
 }
