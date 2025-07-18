@@ -1,0 +1,11 @@
+/home/rock/repos/safe_rustcl/target/debug/deps/ed25519_compact-f177ec9610d26734.d: /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/lib.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/common.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/error.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/field25519.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/sha512.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/ed25519.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/edwards25519.rs
+
+/home/rock/repos/safe_rustcl/target/debug/deps/libed25519_compact-f177ec9610d26734.rmeta: /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/lib.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/common.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/error.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/field25519.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/sha512.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/ed25519.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/edwards25519.rs
+
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/lib.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/common.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/error.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/field25519.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/sha512.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/ed25519.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ed25519-compact-2.1.1/src/edwards25519.rs:

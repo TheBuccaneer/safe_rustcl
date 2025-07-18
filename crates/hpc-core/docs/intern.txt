@@ -1,0 +1,17 @@
+1. starting to use cargo-geiger - Tool explores unsafe code according to google. 
+- quantisize memory safety violations.
+- I can check out how much safety code I need to search for.
+- cargo geiger gives you:
+│   ├── safe_rustcl v0.1.0 (/home/user/safe_rustcl)
+│   │   └── 4 unsafe functions
+│   │   └── 1 unsafe impl
+│   ├── opencl3 v0.3.5
+│   │   └── 60 unsafe functions
+│   │   └── 5 unsafe impls
+
+2. cargo criterion 
+- cargo install cargo-geiger cargo-criterion --locked 
+- Das Flag --locked bei cargo install sorgt dafür, dass 
+Cargo exakt die im Cargo.lock gespeicherten Abhängigkeitsversionen verwendet.
+- criterion.rs ist das bekannteste Benchmarking-Framework in Rust, 
+gedacht für präzise, statistisch abgesicherte Performance-Messungen.

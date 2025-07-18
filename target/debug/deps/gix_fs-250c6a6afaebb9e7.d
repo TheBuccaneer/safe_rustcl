@@ -1,0 +1,13 @@
+/home/rock/repos/safe_rustcl/target/debug/deps/gix_fs-250c6a6afaebb9e7.d: /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/lib.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/capabilities.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/snapshot.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/symlink.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/read_dir.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/mod.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/create.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/remove.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/stack.rs
+
+/home/rock/repos/safe_rustcl/target/debug/deps/libgix_fs-250c6a6afaebb9e7.rmeta: /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/lib.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/capabilities.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/snapshot.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/symlink.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/read_dir.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/mod.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/create.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/remove.rs /home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/stack.rs
+
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/lib.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/capabilities.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/snapshot.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/symlink.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/read_dir.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/mod.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/create.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/dir/remove.rs:
+/home/rock/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/gix-fs-0.12.1/src/stack.rs:
