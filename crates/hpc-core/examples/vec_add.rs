@@ -27,30 +27,17 @@ fn main() -> Result<(), ClError> {
     let mut h_out = vec![0.0_f32; n];
 
     // ----- 3. Device‑Buffer anlegen ----------------
-    let mut a_dev = GpuBuffer::<Queued>::new(&context, n * 4)?;
-    let mut b_dev = GpuBuffer::<Queued>::new(&context, n * 4)?;
+    let a_queued = GpuBuffer::<Queued>::new(&context, n * 4)?;
+    let b_queued = GpuBuffer::<Queued>::new(&context, n * 4)?;
     let out_dev = GpuBuffer::<Queued>::new(&context, n * 4)?;
 
     // Host → Device kopieren mit Events
-    let evt_a = queue.enqueue_write_buffer(
-        a_dev.raw_mut(),
-        CL_BLOCKING,
-        0,
-        cast_slice(&h_a),
-        &[],
-    )?;
-    
-    let evt_b = queue.enqueue_write_buffer(
-        b_dev.raw_mut(),
-        CL_BLOCKING,
-        0,
-        cast_slice(&h_b),
-        &[],
-    )?;
+    let (a_inflight, guard_a) = a_queued.enqueue_write(&queue, cast_slice(&h_a))?;
+let (b_inflight, guard_b) = b_queued.enqueue_write(&queue, cast_slice(&h_b))?;
 
-    // Buffer in Ready-Zustand überführen
-    let a_dev = a_dev.into_ready(evt_a)?;
-    let b_dev = b_dev.into_ready(evt_b)?;
+// Guard wartet beim Drop → Ready‑Zustand
+let a_ready = a_inflight.into_ready(guard_a);
+let b_ready = b_inflight.into_ready(guard_b);
 
     // ----- 4. Kernel kompilieren & argumentieren ----
     let src = include_str!("vec_add.cl");
@@ -58,8 +45,8 @@ fn main() -> Result<(), ClError> {
         .map_err(|_| ClError::Api(-3))?;
     let kernel = Kernel::create(&program, "vec_add")?;
 
-        kernel.set_arg(0, a_dev.raw())?;
-        kernel.set_arg(1, b_dev.raw())?;
+        kernel.set_arg(0, a_ready.raw())?;
+        kernel.set_arg(1, b_ready.raw())?;
         kernel.set_arg(2, out_dev.raw())?;
 
     

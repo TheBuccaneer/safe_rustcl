@@ -1,3 +1,4 @@
 [workspace]
-members = ["crates/*"]
+members = [
+    "crates/hpc-core"]
 resolver = "2" 

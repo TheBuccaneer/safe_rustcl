@@ -1,12 +1,17 @@
+
+
+
 use opencl3::{
     context::Context,
     memory::{Buffer, CL_MEM_READ_WRITE},
-    event::{Event},
+    event::Event,
+    command_queue::CommandQueue,
+
 };
+use opencl3::types::CL_NON_BLOCKING;
+
 
 use std::{marker::PhantomData, ptr};
-
-
 
 mod sealed { pub trait Sealed {} }
 pub trait State: sealed::Sealed {}
@@ -22,6 +27,7 @@ pub enum ClError {
 }
 
 /// Makro: wandelt cl_int in Result
+/*#[warn(unused_macros)]
 macro_rules! cl_try {
     ($expr:expr) => {
         let err = unsafe { $expr };
@@ -31,7 +37,7 @@ macro_rules! cl_try {
     };
 }
 pub(crate) use cl_try;
-
+*/
 
 impl From<opencl3::error_codes::ClError> for ClError {
     fn from(err: opencl3::error_codes::ClError) -> Self {
@@ -48,9 +54,9 @@ impl From<i32> for ClError {
 
 
 pub struct GpuBuffer<S> {
-    buf: Buffer<u8>,
-    len: usize,
-    _state: PhantomData<S>,
+    pub buf: Buffer<u8>,
+    pub len: usize,
+    pub _state: PhantomData<S>,
 }
 
 
@@ -66,6 +72,28 @@ impl GpuBuffer<Queued> {
         )?;
         Ok(Self { buf, len, _state: PhantomData })
     }
+
+    pub fn enqueue_write(
+    mut self,
+    queue: &CommandQueue,
+    host_data: &[u8],
+) -> Result<(GpuBuffer<InFlight>, GpuEventGuard), ClError> {
+    let evt = queue.enqueue_write_buffer(
+        &mut self.buf,
+        CL_NON_BLOCKING,
+        0,
+        host_data,
+        &[],
+    )?;
+    Ok((
+        GpuBuffer {
+            buf: self.buf,
+            len: self.len,
+            _state: PhantomData::<InFlight>,
+        },
+        GpuEventGuard { evt },
+    ))
+}
 
     
     /// wartet auf GPU‑Fertigstellung und überführt in Ready‑State
@@ -117,6 +145,16 @@ impl GpuBuffer<InFlight> {
         let _guard = GpuEventGuard { evt };
         GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
     }
+
+    pub fn into_ready(self, _guard: GpuEventGuard) -> GpuBuffer<Ready> {
+        // Der Drop von _guard wartet bis Event fertig ist
+        GpuBuffer {
+            buf: self.buf,
+            len: self.len,
+            _state: PhantomData::<Ready>,
+        }
+    }
+
 }
 
 

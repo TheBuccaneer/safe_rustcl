@@ -9,4 +9,9 @@ thiserror = "1"
 bytemuck  = "1.14"
 
 [dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "vec_add_bench"
+harness = false
 
