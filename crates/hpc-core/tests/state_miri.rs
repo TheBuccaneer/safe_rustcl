@@ -1,56 +1,72 @@
-// Dummy Buffer-Typ ohne OpenCL-Abhängigkeit
+use std::marker::PhantomData;
+
+// ----- 1. Dummy buffer type without OpenCL dependency -----
 struct DummyBuffer(u64);
 
-// Typ-State-Dummy-Buffer
+// ----- 2. Generic typestate buffer struct -----
 struct DummyGpuBuffer<S> {
-    buf: DummyBuffer,
-    len: usize,
-    _state: std::marker::PhantomData<S>,
+    buf:    DummyBuffer,
+    len:    usize,
+    _state: PhantomData<S>,
 }
 
-// Typ-State-Marker
-mod sealed { pub trait Sealed {} }
-trait State: sealed::Sealed {}
+// ----- 3. Typestate markers and sealed trait -----
+mod sealed {
+    pub trait Sealed {}
+}
 
-struct Queued;
-struct InFlight;
-struct Ready;
+pub trait State: sealed::Sealed {}
+
+pub struct Queued;
+pub struct InFlight;
+pub struct Ready;
+
+// Implement Sealed for each state
 impl sealed::Sealed for Queued {}
 impl sealed::Sealed for InFlight {}
 impl sealed::Sealed for Ready {}
+
+// Implement State for each marker
 impl State for Queued {}
 impl State for InFlight {}
 impl State for Ready {}
 
+// ----- 4. Test: typestate transitions using only dummy types -----
 #[test]
 fn typestate_transitions_dummy_only() {
-    // Dummy erzeugen ohne undefiniertes Verhalten
+    // 4.1 Create a DummyBuffer instance
     let dummy = DummyBuffer(12345);
 
+    // 4.2 Wrap it in a Queued-state buffer
     let queued = DummyGpuBuffer::<Queued> {
-        buf: dummy,
-        len: 42,
-        _state: std::marker::PhantomData,
+        buf:    dummy,
+        len:    42,
+        _state: PhantomData,
     };
 
+    // 4.3 Transition to InFlight state by moving the buffer
     let inflight: DummyGpuBuffer<InFlight> = DummyGpuBuffer {
-        buf: queued.buf,
-        len: queued.len,
-        _state: std::marker::PhantomData,
+        buf:    queued.buf,
+        len:    queued.len,
+        _state: PhantomData,
     };
 
+    // 4.4 Define a dummy guard struct to simulate GPU-event guard
     struct DummyGuard;
     impl Drop for DummyGuard {
-        fn drop(&mut self) {}
+        fn drop(&mut self) {
+            // This drop could perform synchronization in a real implementation
+        }
     }
-
     let guard = DummyGuard;
 
+    // 4.5 After the guard is dropped, transition to Ready state
     let _ready: DummyGpuBuffer<Ready> = DummyGpuBuffer {
-        buf: inflight.buf,
-        len: inflight.len,
-        _state: std::marker::PhantomData,
+        buf:    inflight.buf,
+        len:    inflight.len,
+        _state: PhantomData,
     };
 
-    drop(guard); // DummyGuard Drop korrekt durchlaufen
+    // Explicitly drop the guard to complete the Ready transition
+    drop(guard);
 }

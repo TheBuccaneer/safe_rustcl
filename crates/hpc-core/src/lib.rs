@@ -1,5 +1,10 @@
+#[cfg(feature = "metrics")]
+mod metrics;
 
+#[cfg(feature = "metrics")]
+pub use metrics::*;
 
+pub mod memtracer;
 
 use opencl3::{
     context::Context,
@@ -64,12 +69,19 @@ pub struct GpuBuffer<S> {
 impl GpuBuffer<Queued> {
     /// legt ein neues GPU‑Buffer an, noch **nicht** synchronisiert
     pub fn new(context: &Context, len: usize) -> Result<Self, ClError> {
+        #[cfg(feature = "metrics")]
+        let t0 = std::time::Instant::now();
+
         let buf = Buffer::<u8>::create(
             context,
             CL_MEM_READ_WRITE,
             len,
             ptr::null_mut(),
         )?;
+
+        #[cfg(feature = "metrics")]
+        record("GpuBuffer::new", t0);
+
         Ok(Self { buf, len, _state: PhantomData })
     }
 
@@ -111,10 +123,20 @@ impl GpuBuffer<Queued> {
     */
 
     pub fn into_ready(self, evt: Event) -> Result<GpuBuffer<Ready>, ClError> {
-    evt.wait()?;   // nutzt das OpenCL3‑Wrapper‑safe wait
-    Ok(GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData })
+        #[cfg(feature = "metrics")]
+        let t1 = std::time::Instant::now();
+
+        evt.wait()?;
+
+        #[cfg(feature = "metrics")]
+        record("into_ready", t1);
+
+        Ok(GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData })
+    }
+
+
 }
-}
+
 
 
 
