@@ -1,3 +1,8 @@
+// 2025 Thomas Bicanic
+//
+// This software is released under the MIT License.
+// See LICENSE file in repository root for full license text.
+
 use bytemuck::{cast_slice, cast_slice_mut};
 use hpc_core::{ClError, GpuBuffer, Queued};
 
