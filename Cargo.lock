@@ -242,6 +242,7 @@ dependencies = [
  "criterion",
  "csv",
  "lazy_static",
+ "once_cell",
  "opencl3",
  "thiserror",
 ]
