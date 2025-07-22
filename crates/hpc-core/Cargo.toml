@@ -18,6 +18,15 @@ criterion = { version = "0.5", features = ["html_reports"] }
 name = "vec_add_bench"
 harness = false
 
+[[bench]]
+name = "stencil_bench"
+harness = false
+
+
+[build]
+rustflags = ["-Clink-arg=-Wl,-z,relro,-z,now"] # z.B. für reproducible builds
+
+
 
 [features]
 default = []

@@ -41,11 +41,20 @@ pub fn summary() {
 
     println!("── metrics summary ──");
     for (name, mut v) in map {
-        v.sort_unstable();
-        let mean = v.iter().sum::<u128>() / v.len() as u128;
-        let p95  = v[((v.len() * 95) / 100).saturating_sub(1)];
-        println!("{:<18} mean={:>5} µs   p95={:>5} µs", name, mean, p95);
+    v.sort_unstable();
+    let mean = v.iter().sum::<u128>() / v.len() as u128;
+    let p95  = v[((v.len() * 95) / 100).saturating_sub(1)];
+
+    println!("{:<18} mean={:>5} µs   p95={:>5} µs", name, mean, p95);
+
+    if name == "enqueue_write" {
+        // grober Durchsatz aus Gesamt-Bytes & Gesamt-Zeit
+        let total_us: u128 = v.iter().sum();
+        let gbps = (hpc_core::ALLOC_BYTES.load(Ordering::Relaxed) as f64)
+                 / (total_us as f64) / 1e3; // GiB/s
+        println!("    ↳ throughput ≈ {:.2} GiB/s", gbps);
     }
+}
 
     /* Allokations‑Zähler */
     let allocs = ALLOCS.load(Ordering::Relaxed);
