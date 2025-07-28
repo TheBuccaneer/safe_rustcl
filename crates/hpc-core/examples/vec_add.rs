@@ -11,7 +11,6 @@ use opencl3::{
     memory::{Buffer, CL_MEM_READ_WRITE},
     platform::get_platforms,
     program::Program,
-    types::{CL_BLOCKING, CL_NON_BLOCKING},
 };
 
 #[cfg(feature = "metrics")]
@@ -30,7 +29,6 @@ fn main() -> Result<(), ClError> {
 
     /* ---------- 2. Hostdaten ------------------------------------- */
     let n           = 1 << 22;                       // 1 048 576 Elemente
-    let size_bytes  = n * std::mem::size_of::<f32>(); // 4 MiB
     let h_a         = vec![1.0_f32; n];
     let h_b         = vec![2.0_f32; n];
     let mut h_out   = vec![0.0_f32; n];
@@ -45,7 +43,7 @@ fn main() -> Result<(), ClError> {
 
     /* ---------- 4. Host → Device  (ein Sammel-Token) ------------- */
     /* ---------- 4. Host→Device – zwei seriell getrennte Tokens ------- */
-use opencl3::types::{CL_BLOCKING, CL_NON_BLOCKING};   // oben in den use-Blöcken ergänzen
+use opencl3::types::{CL_BLOCKING};   // oben in den use-Blöcken ergänzen
 
 // --- Kopie A ------------------------------------------------------
 #[cfg(feature="memtrace")]

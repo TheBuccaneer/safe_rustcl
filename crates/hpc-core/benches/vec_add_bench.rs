@@ -4,7 +4,7 @@ use bytemuck::cast_slice;
 use bytemuck::cast_slice_mut;
 use opencl3::{
     context::Context, command_queue::{CommandQueue, CL_QUEUE_PROFILING_ENABLE}, program::Program, kernel::Kernel,
-    platform::get_platforms, device::{Device, CL_DEVICE_TYPE_GPU}, types::CL_BLOCKING,
+    platform::get_platforms, device::{Device, CL_DEVICE_TYPE_GPU},
 };
 use std::time::Duration;
 
@@ -38,7 +38,7 @@ fn bench_vec_add(c: &mut Criterion) {
             let src     = include_str!("../examples/vec_add.cl");
             let program = Program::create_and_build_from_source(&context, src, "")
                 .map_err(|_| ClError::Api(-3)).unwrap();
-            let mut kernel = Kernel::create(&program, "vec_add").unwrap();
+            let kernel = Kernel::create(&program, "vec_add").unwrap();
             // Buffer anlegen
             let size_bytes = n * std::mem::size_of::<f32>();
             let a_buf = GpuBuffer::<Queued>::new(&context, size_bytes).unwrap();

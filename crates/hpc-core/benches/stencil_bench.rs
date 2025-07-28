@@ -4,7 +4,7 @@
 // discussed in the chat: 3 s warm-up, 30 samples, 10 s measurement window.
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion, Throughput};
-use hpc_core::{ClError, GpuBuffer, Queued, Ready};
+use hpc_core::{GpuBuffer, Queued, Ready};
 use bytemuck::cast_slice;
 use opencl3::{
     command_queue::{CommandQueue, CL_QUEUE_PROFILING_ENABLE},
@@ -44,7 +44,7 @@ fn bench_stencil(c: &mut Criterion) {
                 // Build kernel
                 let src      = include_str!("../examples/stencil.cl");
                 let program  = Program::create_and_build_from_source(&context, src, "").unwrap();
-                let mut kern = Kernel::create(&program, "jacobi").unwrap();
+                let kern = Kernel::create(&program, "jacobi").unwrap();
                 kern.set_arg(2, &(NX as i32)).unwrap();
 
                 // Initialise ping buffer (Ready)
@@ -56,7 +56,7 @@ fn bench_stencil(c: &mut Criterion) {
                 (context, queue, kern, ping_ready)
             },
             /* ------------------- Measured body --------------------- */
-            |(context, queue, mut kern, mut ping)| {
+            |(context, queue, kern, mut ping)| {
                 for _ in 0..N_ITERS {
                     // dst: Queued → InFlight
                     let mut dst_if = GpuBuffer::<Queued>::new(&context, N_BYTES).unwrap().launch();
