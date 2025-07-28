@@ -50,7 +50,7 @@ pub fn summary() {
     if name == "enqueue_write" {
         // grober Durchsatz aus Gesamt-Bytes & Gesamt-Zeit
         let total_us: u128 = v.iter().sum();
-        let gbps = (hpc_core::ALLOC_BYTES.load(Ordering::Relaxed) as f64)
+        let gbps = (crate::ALLOC_BYTES.load(Ordering::Relaxed) as f64)
                  / (total_us as f64) / 1e3; // GiB/s
         println!("    ↳ throughput ≈ {:.2} GiB/s", gbps);
     }

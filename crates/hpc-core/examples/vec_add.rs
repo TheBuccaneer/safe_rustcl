@@ -1,127 +1,124 @@
-// 2025 Thomas Bicanic
-//
-// This software is released under the MIT License.
-// See LICENSE file in repository root for full license text.
+// 2025 Thomas Bicanic – MIT License
 
 use bytemuck::{cast_slice, cast_slice_mut};
-use hpc_core::{ClError, GpuBuffer, Queued};
+use hpc_core::ClError;
 
 use opencl3::{
     command_queue::{CommandQueue, CL_QUEUE_PROFILING_ENABLE},
     context::Context,
     device::{Device, CL_DEVICE_TYPE_GPU},
     kernel::Kernel,
+    memory::{Buffer, CL_MEM_READ_WRITE},
     platform::get_platforms,
     program::Program,
-    types::CL_BLOCKING,
+    types::{CL_BLOCKING, CL_NON_BLOCKING},
 };
 
 #[cfg(feature = "metrics")]
-use hpc_core::summary;                      // Mean & P95
-
+use hpc_core::summary;
 #[cfg(feature = "memtrace")]
-use hpc_core::{start as trace_start, Dir, flush_csv};  // ← Alias gegen Namenskollision
+use hpc_core::{start as trace_start, Dir, flush_csv};
 
 fn main() -> Result<(), ClError> {
-
-
-    // ---------- 1. Context & Queue ----------------------------------
+    /* ---------- 1. OpenCL-Setup ---------------------------------- */
     let platform   = get_platforms()?.remove(0);
-    let device_ids = platform.get_devices(CL_DEVICE_TYPE_GPU)?;
-    let device     = Device::new(device_ids[0]);
+    let device_id  = platform.get_devices(CL_DEVICE_TYPE_GPU)?[0];
+    let device     = Device::new(device_id);
     let context    = Context::from_device(&device)?;
-    let queue = CommandQueue::create(&context, device.id(), CL_QUEUE_PROFILING_ENABLE)?;
+    let queue      = CommandQueue::create(
+        &context, device.id(), CL_QUEUE_PROFILING_ENABLE)?;
 
-    // ---------- 2. Host‑Daten ---------------------------------------
-    let n = 1 << 20;
-    let h_a = vec![1.0_f32; n];
-    let h_b = vec![2.0_f32; n];
-    let mut h_out = vec![0.0_f32; n];
+    /* ---------- 2. Hostdaten ------------------------------------- */
+    let n           = 1 << 22;                       // 1 048 576 Elemente
+    let size_bytes  = n * std::mem::size_of::<f32>(); // 4 MiB
+    let h_a         = vec![1.0_f32; n];
+    let h_b         = vec![2.0_f32; n];
+    let mut h_out   = vec![0.0_f32; n];
 
-    // ---------- 3. Device‑Buffer ------------------------------------
-    let a_dev = GpuBuffer::<Queued>::new(&context, n * std::mem::size_of::<f32>())?;
-    let b_dev = GpuBuffer::<Queued>::new(&context, n * std::mem::size_of::<f32>())?;
-    let out_dev = GpuBuffer::<Queued>::new(&context, n * std::mem::size_of::<f32>())?;
+    /* ---------- 3. Device-Buffer anlegen ------------------------- */
+    let mut a_dev: Buffer<f32>  =
+        Buffer::create(&context, CL_MEM_READ_WRITE, n, std::ptr::null_mut())?;
+    let mut b_dev: Buffer<f32>  =
+        Buffer::create(&context, CL_MEM_READ_WRITE, n, std::ptr::null_mut())?;
+    let mut out_dev: Buffer<f32> =
+        Buffer::create(&context, CL_MEM_READ_WRITE, n, std::ptr::null_mut())?;
 
-    // Host → Device
-    let (a_inflight, g_a) = a_dev.enqueue_write(&queue, cast_slice(&h_a))?;
-    let (b_inflight, g_b) = b_dev.enqueue_write(&queue, cast_slice(&h_b))?;
-    let a_ready = a_inflight.into_ready(g_a);
-    let b_ready = b_inflight.into_ready(g_b);
+    /* ---------- 4. Host → Device  (ein Sammel-Token) ------------- */
+    /* ---------- 4. Host→Device – zwei seriell getrennte Tokens ------- */
+use opencl3::types::{CL_BLOCKING, CL_NON_BLOCKING};   // oben in den use-Blöcken ergänzen
 
-    // ---------- 4. Kernel kompilieren & setzen ----------------------
-     #[cfg(feature = "memtrace")]
-    let kernel_tok = Box::new(trace_start(Dir::Kernel, 0));
+// --- Kopie A ------------------------------------------------------
+#[cfg(feature="memtrace")]
+let tok_h2d_a = trace_start(Dir::H2D, size_bytes);     // Token A starten
 
-    
-    let src = include_str!("vec_add.cl");
+queue.enqueue_write_buffer(
+    &mut a_dev,
+    CL_BLOCKING,         // <-- blockierend!
+    0,
+    cast_slice(&h_a),
+    &[],
+)?;                       // Funktion kehrt erst zurück, wenn DMA fertig ist
+
+#[cfg(feature="memtrace")]
+tok_h2d_a.finish();        // Token A schließen – 1. H2D-Zeile
+
+// --- Kopie B ------------------------------------------------------
+#[cfg(feature="memtrace")]
+let tok_h2d_b = trace_start(Dir::H2D, size_bytes);     // Token B starten
+
+queue.enqueue_write_buffer(
+    &mut b_dev,
+    CL_BLOCKING,          // wieder blockierend
+    0,
+    cast_slice(&h_b),
+    &[],
+)?;
+
+#[cfg(feature="memtrace")]
+tok_h2d_b.finish();        // Token B schließen – 2. H2D-Zeile
+/* ---------------------------------------------------------------- */                                  // genau **eine** H2D-Zeile
+
+    /* ---------- 5. Kernel – ein Token --------------------------- */
+    #[cfg(feature = "memtrace")]
+    let tok_kernel = trace_start(Dir::Kernel, 0);
+
+    let src     = include_str!("../examples/vec_add.cl");
     let program = Program::create_and_build_from_source(&context, src, "")
         .map_err(|_| ClError::Api(-3))?;
-    let kernel = Kernel::create(&program, "vec_add")?;
-    kernel.set_arg(0, a_ready.raw())?;
-    kernel.set_arg(1, b_ready.raw())?;
-    kernel.set_arg(2, out_dev.raw())?;
+    let kernel  = Kernel::create(&program, "vec_add")?;
+    kernel.set_arg(0, &a_dev)?;   // Buffer implementiert KernelArg
+    kernel.set_arg(1, &b_dev)?;
+    kernel.set_arg(2, &out_dev)?;
 
-   
-    // Kernel ausführen
-    let global_size = [n, 1, 1];
-    let evt_kernel = queue.enqueue_nd_range_kernel(
-        kernel.get(),
-        1,
-        std::ptr::null(),
-        global_size.as_ptr(),
-        std::ptr::null(),
-        &[],
-    )?;
+    let global = [n, 1, 1];
+    queue.enqueue_nd_range_kernel(
+        kernel.get(), 1,
+        std::ptr::null(), global.as_ptr(),
+        std::ptr::null(), &[])?;
+    queue.finish()?;                                         // Kernel fertig
 
     #[cfg(feature = "memtrace")]
-{
-    use opencl3::event::CL_COMPLETE;          // Status-Konstante für „fertig“
+    tok_kernel.finish();                                     // eine Kernel-Zeile
 
-    // 2) Pointer auf token_box erzeugen
-    let user_ptr = Box::into_raw(kernel_tok) as *mut std::ffi::c_void;
-
-    // 3) Callback setzen – memtrace_callback liegt schon in lib.rs
-    if let Err(e) = evt_kernel.set_callback(CL_COMPLETE, hpc_core::memtrace_callback, user_ptr) {
-        eprintln!("kernel callback failed: {e}");
-        // Fallback: Box zurückholen und finish() sofort ausführen
-        unsafe { Box::from_raw(user_ptr as *mut hpc_core::CopyToken) }.finish();
-    }
-}
-
-    // ---------- 5. Kernel‑Profiling ---------------------------------
-    evt_kernel.wait()?;
-    let k_start = evt_kernel.profiling_command_start()?;
-    let k_end   = evt_kernel.profiling_command_end()?;
-    let kernel_us = (k_end.saturating_sub(k_start)) / 1_000;
-    println!("Kernel execution: {} µs", kernel_us);
-
-    // ---------- 6. Device → Host kopieren ---------------------------
+    /* ---------- 6. Device → Host – ein Token -------------------- */
     #[cfg(feature = "memtrace")]
-    let tok_read = trace_start(Dir::D2H, h_out.len() * std::mem::size_of::<f32>());
+    let tok_d2h = trace_start(Dir::D2H, size_bytes);
 
     queue.enqueue_read_buffer(
-        out_dev.raw(),
-        CL_BLOCKING,
-        0,
-        cast_slice_mut(&mut h_out),
-        &[],
-    )?;
-    queue.finish()?;
+        &mut out_dev, CL_BLOCKING, 0,
+        cast_slice_mut(&mut h_out), &[])?;                   // blockierend
 
     #[cfg(feature = "memtrace")]
-    tok_read.finish();
+    tok_d2h.finish();                                       // eine D2H-Zeile
 
-    // ---------- 7. Verifizieren -------------------------------------
+    /* ---------- 7. Verifizieren & Ausgabe ----------------------- */
     assert!(h_out.iter().all(|&x| (x - 3.0).abs() < 1e-6));
     println!("vec_add OK, first element = {}", h_out[0]);
 
-    // ---------- 8. Ausgaben -----------------------------------------
     #[cfg(feature = "metrics")]
     summary();
-
     #[cfg(feature = "memtrace")]
-    flush_csv();
+    flush_csv();                                             // schreibt memtrace.csv
 
     Ok(())
 }
