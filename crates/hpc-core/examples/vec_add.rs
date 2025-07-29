@@ -29,6 +29,7 @@ fn main() -> Result<(), ClError> {
 
     /* ---------- 2. Hostdaten ------------------------------------- */
     let n           = 1 << 22;                       // 1 048 576 Elemente
+    let size_bytes  = n * std::mem::size_of::<f32>(); // 4 MiB
     let h_a         = vec![1.0_f32; n];
     let h_b         = vec![2.0_f32; n];
     let mut h_out   = vec![0.0_f32; n];
