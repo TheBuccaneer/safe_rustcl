@@ -106,7 +106,7 @@ fn bench_stencil(c: &mut Criterion) {
                     kern.set_arg(0, ping.raw()).unwrap();
                     kern.set_arg(1, dst_if.raw_mut()).unwrap();
                     kern.set_arg(2, &(NX as i32)).unwrap(); // width
-                    kern.set_arg(3, &(NY as i32)).unwrap(); // height ← Make sure this is set every iteration
+                    kern.set_arg(3, &(NY as i32)).unwrap(); // height
 
                     // global ND-range
                     let global = [NX, NY, 1];
@@ -130,14 +130,14 @@ fn bench_stencil(c: &mut Criterion) {
 // ─────────────────────────────────────────────────────────── Criterion config ──
 fn criterion_config() -> Criterion {
     Criterion::default()
-        // 3 s warm-up to heat up GPU / caches
         .warm_up_time(Duration::from_secs(3))
-        // 10 s measurement window per sample
-        .measurement_time(Duration::from_secs(10))
-        // 30 statistically independent samples
-        .sample_size(30)
-        // allow `cargo bench --bench ... -- <extra args>` to override settings
-        .configure_from_args()
+        .measurement_time(Duration::from_secs(20))
+        .sample_size(30)       // Bootstrap-Resamples
+
+    // CLI-Override LAST, weil es `()` zurückgibt
+    .configure_from_args()
+    
+    
 }
 
 criterion_group! {

@@ -77,6 +77,7 @@ pub struct InFlight; impl sealed::Sealed for InFlight {} impl State for InFlight
 pub struct Ready;    impl sealed::Sealed for Ready  {}   impl State for Ready  {}
 
 // ─── GPU‑Buffer Wrapper ──────────────────────────────────────────────
+
 pub struct GpuBuffer<S> {
     buf: Buffer<u8>,
     len: usize,
@@ -85,6 +86,7 @@ pub struct GpuBuffer<S> {
 
 // ── Queued ───────────────────────────────────────────────────────────
 impl GpuBuffer<Queued> {
+    #[inline(always)]
     pub fn new(ctx: &Context, len: usize) -> Result<Self, ClError> {
         // **Allocation‑Zähler** (neu)
         #[cfg(feature = "metrics")]
@@ -104,6 +106,7 @@ impl GpuBuffer<Queued> {
         Ok(Self { buf, len, _state: PhantomData })
     }
 
+    #[inline(always)]
     pub fn enqueue_write(
         mut self,
         queue: &CommandQueue,
@@ -119,7 +122,6 @@ impl GpuBuffer<Queued> {
         } else {
             None
         };
-
         let evt = queue.enqueue_write_buffer(
             &mut self.buf,
             CL_NON_BLOCKING,
@@ -146,7 +148,7 @@ impl GpuBuffer<Queued> {
             GpuEventGuard { evt },
         ))
     }
-
+#[inline(always)]
     pub fn launch(self) -> GpuBuffer<InFlight> {
         #[cfg(feature="metrics")] record("launch", Instant::now());
         GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
@@ -155,6 +157,7 @@ impl GpuBuffer<Queued> {
 
 // ── Ready → Host (D2H) ───────────────────────────────────────────────
 impl GpuBuffer<Ready> {
+    #[inline(always)]
     pub fn enqueue_read(
         mut self,
         queue: &CommandQueue,
@@ -201,12 +204,13 @@ impl GpuBuffer<Ready> {
 
 // ── InFlight ─────────────────────────────────────────────────────────
 impl GpuBuffer<InFlight> {
+    #[inline(always)]
     pub fn complete(self, evt: Event) -> GpuBuffer<Ready> {
         let _g = GpuEventGuard { evt };
         #[cfg(feature="metrics")] record("complete", Instant::now());
         GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
     }
-
+#[inline(always)]
     pub fn into_ready(self, _g: GpuEventGuard) -> GpuBuffer<Ready> {
         #[cfg(feature="metrics")] record("into_ready", Instant::now());
         GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
@@ -215,14 +219,18 @@ impl GpuBuffer<InFlight> {
 
 // ── Accessors (alle States) ──────────────────────────────────────────
 impl<S> GpuBuffer<S> {
+    #[inline(always)]
     pub fn raw(&self) -> &Buffer<u8> { &self.buf }
+    #[inline(always)]
     pub fn raw_mut(&mut self) -> &mut Buffer<u8> { &mut self.buf }
+    #[inline(always)]
     pub fn len(&self) -> usize { self.len }
 }
 
 // ── Guard (wartet bei Drop auf Event) ────────────────────────────────
 pub struct GpuEventGuard { evt: Event }
 impl Drop for GpuEventGuard {
+    #[inline(always)]
     fn drop(&mut self) { let _ = self.evt.wait(); }
 }
 

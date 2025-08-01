@@ -30,3 +30,11 @@ rustflags = ["-Clink-arg=-Wl,-z,relro,-z,now"] # z.B. für reproducible builds
 default = []
 metrics = []
 memtrace = []
+
+[[example]]
+name = "bandwidth_basic"
+path = "examples/bandwidth_basic.rs"
+
+[[example]]
+name = "bandwidth_optimized" 
+path = "examples/bandwidth_optimized.rs"

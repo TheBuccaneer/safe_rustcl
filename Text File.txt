@@ -1,0 +1,10 @@
+
+cargo run --release --example stencil_raw --features "memtrace metrics" -- 1026 × 1026
+cargo run --release --example stencil_raw --features "memtrace metrics" -- 8194 × 8194
+cargo run --release --example stencil_raw --features "memtrace metrics" -- 16386 × 16386
+cargo run --release --example stencil_raw --features "memtrace metrics" -- 32770 × 32770
+
+mv memtrace.csv memtrace_raw_1026.csv
+
+
+
