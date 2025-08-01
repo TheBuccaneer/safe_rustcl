@@ -7,7 +7,7 @@ pub use metrics::*;
 #[cfg(feature = "memtrace")]
 mod memtracer;
 #[cfg(feature = "memtrace")]
-pub use memtracer::{start, Dir, CopyToken, flush_csv};
+pub use memtracer::{start, Dir, CopyToken, flush_csv, TracingScope, is_auto_trace_enabled, enable_auto_trace, disable_auto_trace};
 
 // ─── Extern‑Callback (nur für memtrace) ───────────────────────────────
 #[cfg(feature = "memtrace")]
@@ -114,7 +114,11 @@ impl GpuBuffer<Queued> {
         let t = Instant::now();
 
         #[cfg(feature="memtrace")]
-        let token_box = Box::new(start(Dir::H2D, host.len()));
+        let token_box = if is_auto_trace_enabled() {
+            Some(Box::new(start(Dir::H2D, host.len())))
+        } else {
+            None
+        };
 
         let evt = queue.enqueue_write_buffer(
             &mut self.buf,
@@ -125,7 +129,7 @@ impl GpuBuffer<Queued> {
         )?;
 
         #[cfg(feature="memtrace")]
-        {
+        if let Some(token_box) = token_box {
             use opencl3::event::CL_COMPLETE;
             let ptr = Box::into_raw(token_box) as *mut c_void;
             if let Err(e) = evt.set_callback(CL_COMPLETE, memtrace_callback, ptr) {
@@ -161,7 +165,11 @@ impl GpuBuffer<Ready> {
         let t = Instant::now();
 
         #[cfg(feature="memtrace")]
-        let token_box = Box::new(start(Dir::D2H, host_out.len()));
+        let token_box = if is_auto_trace_enabled() {
+            Some(Box::new(start(Dir::D2H, host_out.len())))
+        } else {
+            None
+        };
 
         let evt = queue.enqueue_read_buffer(
             &mut self.buf,
@@ -172,7 +180,7 @@ impl GpuBuffer<Ready> {
         )?;
 
         #[cfg(feature="memtrace")]
-        {
+        if let Some(token_box) = token_box {
             use opencl3::event::CL_COMPLETE;
             let ptr = Box::into_raw(token_box) as *mut c_void;
             if let Err(e) = evt.set_callback(CL_COMPLETE, memtrace_callback, ptr) {

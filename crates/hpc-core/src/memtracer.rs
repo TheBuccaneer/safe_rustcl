@@ -2,7 +2,12 @@
 #![cfg(feature = "memtrace")]
 
 use once_cell::sync::Lazy;
-use std::{fs::File, io::Write, sync::Mutex, time::Instant};
+use std::{
+    fs::File, 
+    io::Write, 
+    sync::{Mutex, atomic::{AtomicBool, Ordering}}, 
+    time::Instant
+};
 
 /// Transfer‑Richtung oder Kernel‑Event
 #[derive(Clone, Copy)]
@@ -24,11 +29,52 @@ static T0: Lazy<Instant> = Lazy::new(Instant::now);
 static LOG: Lazy<Mutex<Vec<(u128, u128, usize, &'static str, u128)>>> =
     Lazy::new(|| Mutex::new(Vec::new()));
 
+/// Global flag für automatisches Tracing
+static AUTO_TRACE: AtomicBool = AtomicBool::new(true);
+
 /// Token hält Startzeit, Größe & Richtung
 pub struct CopyToken {
     start: Instant,
     bytes: usize,
     dir: Dir,
+}
+
+/// Scoped guard für temporäre Tracing-Kontrolle
+pub struct TracingScope {
+    prev_state: bool,
+}
+
+impl TracingScope {
+    pub fn disabled() -> Self {
+        let prev_state = AUTO_TRACE.swap(false, Ordering::Relaxed);
+        Self { prev_state }
+    }
+    
+    pub fn enabled() -> Self {
+        let prev_state = AUTO_TRACE.swap(true, Ordering::Relaxed);
+        Self { prev_state }
+    }
+}
+
+impl Drop for TracingScope {
+    fn drop(&mut self) {
+        AUTO_TRACE.store(self.prev_state, Ordering::Relaxed);
+    }
+}
+
+/// Prüft ob Auto-Tracing aktiviert ist
+pub fn is_auto_trace_enabled() -> bool {
+    AUTO_TRACE.load(Ordering::Relaxed)
+}
+
+/// Aktiviert Auto-Tracing global
+pub fn enable_auto_trace() {
+    AUTO_TRACE.store(true, Ordering::Relaxed);
+}
+
+/// Deaktiviert Auto-Tracing global
+pub fn disable_auto_trace() {
+    AUTO_TRACE.store(false, Ordering::Relaxed);
 }
 
 /// Start eines Transfers/Kernels – ruft Lazy::force(&T0) auf
