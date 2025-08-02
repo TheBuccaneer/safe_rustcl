@@ -1,5 +1,0 @@
-t_start_us,t_end_us,bytes,dir,idle_us
-0,104,4096,H2D,0
-105,121,4096,H2D,1
-121,4260,0,Kernel,0
-4260,4282,4096,D2H,0

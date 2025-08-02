@@ -22,7 +22,7 @@ pub extern "C" fn memtrace_callback(
     _status: cl_int,
     user_data: *mut c_void,
 ) {
-    // Safety: stammt aus Box::into_raw
+    // SAFETY: Pointer was obtained via `Box::into_raw`, so it is non-null and uniquely owned.
     let tok: Box<CopyToken> = unsafe { Box::from_raw(user_data.cast()) };
     tok.finish();
 }
@@ -86,7 +86,7 @@ pub struct GpuBuffer<S> {
 
 // ── Queued ───────────────────────────────────────────────────────────
 impl GpuBuffer<Queued> {
-    #[inline(always)]
+    
     pub fn new(ctx: &Context, len: usize) -> Result<Self, ClError> {
         // **Allocation‑Zähler** (neu)
         #[cfg(feature = "metrics")]
@@ -106,7 +106,7 @@ impl GpuBuffer<Queued> {
         Ok(Self { buf, len, _state: PhantomData })
     }
 
-    #[inline(always)]
+
     pub fn enqueue_write(
         mut self,
         queue: &CommandQueue,
@@ -133,9 +133,15 @@ impl GpuBuffer<Queued> {
         #[cfg(feature="memtrace")]
         if let Some(token_box) = token_box {
             use opencl3::event::CL_COMPLETE;
+            // SAFETY: `Box::into_raw` yields a non-null, uniquely-owned pointer.
+        // Ownership is transferred to the OpenCL runtime and will be
+        // reclaimed in `memtrace_callback` (or immediately below on error).
             let ptr = Box::into_raw(token_box) as *mut c_void;
             if let Err(e) = evt.set_callback(CL_COMPLETE, memtrace_callback, ptr) {
                 eprintln!("callback failed: {e}");
+                 // SAFETY: `set_callback` returned an error, so the runtime did NOT
+            // take ownership of `ptr`. We therefore re-create the Box and drop
+                // it (via `finish`) to avoid a leak.
                 unsafe { Box::from_raw(ptr.cast::<CopyToken>()) }.finish();
             }
         }
@@ -148,7 +154,7 @@ impl GpuBuffer<Queued> {
             GpuEventGuard { evt },
         ))
     }
-#[inline(always)]
+
     pub fn launch(self) -> GpuBuffer<InFlight> {
         #[cfg(feature="metrics")] record("launch", Instant::now());
         GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
@@ -157,7 +163,7 @@ impl GpuBuffer<Queued> {
 
 // ── Ready → Host (D2H) ───────────────────────────────────────────────
 impl GpuBuffer<Ready> {
-    #[inline(always)]
+
     pub fn enqueue_read(
         mut self,
         queue: &CommandQueue,
@@ -185,9 +191,15 @@ impl GpuBuffer<Ready> {
         #[cfg(feature="memtrace")]
         if let Some(token_box) = token_box {
             use opencl3::event::CL_COMPLETE;
+            // SAFETY: `Box::into_raw` yields a non-null, uniquely-owned pointer.
+    // Ownership is transferred to the OpenCL runtime and will be
+    // reclaimed in `memtrace_callback` (or immediately below on error).
             let ptr = Box::into_raw(token_box) as *mut c_void;
             if let Err(e) = evt.set_callback(CL_COMPLETE, memtrace_callback, ptr) {
                 eprintln!("callback failed: {e}");
+                // SAFETY: `set_callback` returned an error, so the runtime did NOT
+        // take ownership of `ptr`. We therefore re-create the Box and drop
+        // it (via `finish`) to avoid a leak.
                 unsafe { Box::from_raw(ptr.cast::<CopyToken>()) }.finish();
             }
         }
@@ -204,13 +216,13 @@ impl GpuBuffer<Ready> {
 
 // ── InFlight ─────────────────────────────────────────────────────────
 impl GpuBuffer<InFlight> {
-    #[inline(always)]
+   
     pub fn complete(self, evt: Event) -> GpuBuffer<Ready> {
         let _g = GpuEventGuard { evt };
         #[cfg(feature="metrics")] record("complete", Instant::now());
         GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
     }
-#[inline(always)]
+
     pub fn into_ready(self, _g: GpuEventGuard) -> GpuBuffer<Ready> {
         #[cfg(feature="metrics")] record("into_ready", Instant::now());
         GpuBuffer { buf: self.buf, len: self.len, _state: PhantomData }
@@ -219,18 +231,18 @@ impl GpuBuffer<InFlight> {
 
 // ── Accessors (alle States) ──────────────────────────────────────────
 impl<S> GpuBuffer<S> {
-    #[inline(always)]
+    
     pub fn raw(&self) -> &Buffer<u8> { &self.buf }
-    #[inline(always)]
+    
     pub fn raw_mut(&mut self) -> &mut Buffer<u8> { &mut self.buf }
-    #[inline(always)]
+    
     pub fn len(&self) -> usize { self.len }
 }
 
 // ── Guard (wartet bei Drop auf Event) ────────────────────────────────
 pub struct GpuEventGuard { evt: Event }
 impl Drop for GpuEventGuard {
-    #[inline(always)]
+   
     fn drop(&mut self) { let _ = self.evt.wait(); }
 }
 

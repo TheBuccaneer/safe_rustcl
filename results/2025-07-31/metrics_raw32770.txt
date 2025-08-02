@@ -1,3 +1,0 @@
-stencil_raw OK for 32770×32770 grid
-── metrics summary ──
-GPU allocations: 0   (0 MiB)

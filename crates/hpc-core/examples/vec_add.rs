@@ -40,6 +40,8 @@ fn main() -> Result<(), ClError> {
     let b_dev   = GpuBuffer::<Queued>::new(&context, size_bytes)?;
     let out_dev = GpuBuffer::<Queued>::new(&context, size_bytes)?;
 
+// error[E0463]: missing field `cl_mem` in initializer of `GpuBuffer<Ready>`
+
     // 4) Host→Device (A)
     #[cfg(feature = "memtrace")]
     let tok_a = trace_start(Dir::H2D, size_bytes);

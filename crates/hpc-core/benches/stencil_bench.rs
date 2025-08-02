@@ -1,7 +1,5 @@
-// Benchmark for Jacobi 4-point stencil – **tuned for low-jitter runs**
-// ────────────────────────────────────────────────────────────────────────────────
-// Warm-up, sample size, measurement time and throughput follow the guidelines
-// discussed in the chat: 3 s warm-up, 30 samples, 10 s measurement window.
+// Benchmark for Jacobi 4-point stencil – **fair comparison**
+// Beide Varianten allokieren Buffer pro Iteration
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion, Throughput};
 use hpc_core::{GpuBuffer, Queued, Ready};
@@ -23,20 +21,20 @@ use std::time::Duration;
 const NX: usize = 1024;
 const NY: usize = 1024;
 const N_BYTES: usize = NX * NY * std::mem::size_of::<f32>();
-const N_ITERS: usize = 10; // kernel sweeps per benchmark sample
+const N_ITERS: usize = 10;
 
-// ───────────────────────────────────────────────────────────── benchmark fn ────
 fn bench_stencil(c: &mut Criterion) {
-    // 1. Create a benchmark group so we can attach throughput metadata
     let mut g = c.benchmark_group("jacobi4");
 
-    // ≈ 3 buffers (src, dst, ping-pong) transferred per sweep
-    g.throughput(Throughput::Bytes((NX * NY * 4 * 3) as u64));
+    // Korrigierte Throughput-Berechnung für 10 Iterationen
+    g.throughput(Throughput::Bytes((NX * NY * 4 * 2 * N_ITERS) as u64));
 
-    g.bench_function("raw_jacobi_1024x1024_10iter", |b| {
+    // ============================================================================
+    // RAW VERSION - MIT Buffer-Allokation pro Iteration (wie Wrapper)
+    // ============================================================================
+    g.bench_function("raw_jacobi_1024x1024_10iter_fair", |b| {
         b.iter_batched(
             || {
-                // Setup wie gehabt
                 let platform = get_platforms().unwrap().remove(0);
                 let dev_id   = platform.get_devices(CL_DEVICE_TYPE_GPU).unwrap()[0];
                 let device   = Device::new(dev_id);
@@ -44,78 +42,77 @@ fn bench_stencil(c: &mut Criterion) {
                 let queue    = CommandQueue::create(&ctx, device.id(), CL_QUEUE_PROFILING_ENABLE).unwrap();
                 let src      = include_str!("../examples/stencil.cl");
                 let program  = Program::create_and_build_from_source(&ctx, src, "").unwrap();
-                let kern = Kernel::create(&program, "jacobi").unwrap();
+                let kern     = Kernel::create(&program, "jacobi").unwrap();
 
-                // Buffers manuell anlegen + initialisieren
-                let mut buf_a = Buffer::<f32>::create(&ctx, CL_MEM_READ_WRITE, NX*NY, ptr::null_mut()).unwrap();
-                let buf_b = Buffer::<f32>::create(&ctx, CL_MEM_READ_WRITE, NX*NY, ptr::null_mut()).unwrap();
-                // init in buf_a
-                queue.enqueue_write_buffer(&mut buf_a, CL_BLOCKING, 0, cast_slice(&vec![1.0_f32; NX*NY]), &[]).unwrap();
-                (queue, kern, buf_a, buf_b)
+                // Nur EINEN Buffer im Setup - wie beim Wrapper
+                let mut buf_src = Buffer::<f32>::create(&ctx, CL_MEM_READ_WRITE, NX*NY, ptr::null_mut()).unwrap();
+                queue.enqueue_write_buffer(&mut buf_src, CL_BLOCKING, 0, cast_slice(&vec![1.0_f32; NX*NY]), &[]).unwrap();
+                
+                (ctx, queue, kern, buf_src)
             },
-            |(queue, kern, mut src_buf, mut dst_buf)| {
-                // 10 Iterationen Raw
+            |(ctx, queue, kern, mut src_buf)| {
+                // ✅ FAIRE VERSION: Neuer dst_buf in jeder Iteration
                 for _ in 0..N_ITERS {
-                    // Set all 4 kernel arguments for each iteration
+                    let mut dst_buf = Buffer::<f32>::create(&ctx, CL_MEM_READ_WRITE, NX*NY, ptr::null_mut()).unwrap();
+                    
                     kern.set_arg(0, &src_buf).unwrap();
                     kern.set_arg(1, &dst_buf).unwrap();
-                    kern.set_arg(2, &(NX as i32)).unwrap(); // width
-                    kern.set_arg(3, &(NY as i32)).unwrap(); // height ← This was missing!
+                    kern.set_arg(2, &(NX as i32)).unwrap();
+                    kern.set_arg(3, &(NY as i32)).unwrap();
                     
                     let evt = queue
                         .enqueue_nd_range_kernel(kern.get(), 2, std::ptr::null(), [NX,NY,1].as_ptr(), std::ptr::null(), &[])
                         .unwrap();
                     evt.wait().unwrap();
-                    std::mem::swap(&mut src_buf, &mut dst_buf);
+                    
+                    // dst wird zu src für nächste Iteration (wie beim Wrapper)
+                    src_buf = dst_buf;
                 }
             },
             BatchSize::SmallInput,
         )
     });
 
-    g.bench_function("jacobi_1024x1024_10iter", |b| {
+    // ============================================================================
+    // WRAPPER VERSION - Unverändert (allokiert bereits pro Iteration)
+    // ============================================================================
+    g.bench_function("wrapper_jacobi_1024x1024_10iter", |b| {
         b.iter_batched(
-            /* ----------- Setup (executed once per sample) ----------- */
             || {
-                // OpenCL boilerplate
                 let platform  = get_platforms().unwrap().remove(0);
                 let dev_id    = platform.get_devices(CL_DEVICE_TYPE_GPU).unwrap()[0];
                 let device    = Device::new(dev_id);
                 let context   = Context::from_device(&device).unwrap();
                 let queue     = CommandQueue::create(&context, device.id(), CL_QUEUE_PROFILING_ENABLE).unwrap();
 
-                // Build kernel
                 let src      = include_str!("../examples/stencil.cl");
                 let program  = Program::create_and_build_from_source(&context, src, "").unwrap();
-                let kern = Kernel::create(&program, "jacobi").unwrap();
+                let kern     = Kernel::create(&program, "jacobi").unwrap();
 
-                // Initialise ping buffer (Ready)
-                let init          = vec![1.0_f32; NX * NY];
-                let (if_buf, g)   = GpuBuffer::<Queued>::new(&context, N_BYTES).unwrap()
+                // Einen Ready-Buffer im Setup
+                let init = vec![1.0_f32; NX * NY];
+                let (ping_buf, g) = GpuBuffer::<Queued>::new(&context, N_BYTES).unwrap()
                     .enqueue_write(&queue, cast_slice(&init)).unwrap();
-                let ping_ready: GpuBuffer<Ready> = if_buf.into_ready(g);
+                let ping_ready: GpuBuffer<Ready> = ping_buf.into_ready(g);
 
                 (context, queue, kern, ping_ready)
             },
-            /* ------------------- Measured body --------------------- */
             |(context, queue, kern, mut ping)| {
+                // ✅ Wrapper allokiert bereits pro Iteration (unverändert)
                 for _ in 0..N_ITERS {
-                    // dst: Queued → InFlight
                     let mut dst_if = GpuBuffer::<Queued>::new(&context, N_BYTES).unwrap().launch();
 
                     kern.set_arg(0, ping.raw()).unwrap();
                     kern.set_arg(1, dst_if.raw_mut()).unwrap();
-                    kern.set_arg(2, &(NX as i32)).unwrap(); // width
-                    kern.set_arg(3, &(NY as i32)).unwrap(); // height
+                    kern.set_arg(2, &(NX as i32)).unwrap();
+                    kern.set_arg(3, &(NY as i32)).unwrap();
 
-                    // global ND-range
                     let global = [NX, NY, 1];
                     let evt = queue
                         .enqueue_nd_range_kernel(kern.get(), 2, std::ptr::null(), global.as_ptr(), std::ptr::null(), &[])
                         .unwrap();
                     evt.wait().unwrap();
 
-                    // InFlight → Ready, swap ping-pong
                     let ready_dst = dst_if.complete(evt);
                     ping = ready_dst;
                 }
@@ -127,17 +124,12 @@ fn bench_stencil(c: &mut Criterion) {
     g.finish();
 }
 
-// ─────────────────────────────────────────────────────────── Criterion config ──
 fn criterion_config() -> Criterion {
     Criterion::default()
         .warm_up_time(Duration::from_secs(3))
         .measurement_time(Duration::from_secs(20))
-        .sample_size(30)       // Bootstrap-Resamples
-
-    // CLI-Override LAST, weil es `()` zurückgibt
-    .configure_from_args()
-    
-    
+        .sample_size(30)
+        .configure_from_args()
 }
 
 criterion_group! {

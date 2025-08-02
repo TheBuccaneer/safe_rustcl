@@ -1,6 +1,0 @@
-Dann lägen die Mediane bei:
-
-Elemente	Boxplot-Median (Iteration)	Boxplot-Median (pro Aufruf)
-1 024	202 000 µs	~ 31 µs
-16 384	203 000 µs	~ 4 µs
-262 144	182 000 µs	~ 78 µs

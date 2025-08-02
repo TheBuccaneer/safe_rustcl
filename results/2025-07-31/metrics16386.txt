@@ -1,8 +1,0 @@
-── metrics summary ──
-into_ready         mean=    0 µs   p95=    0 µs
-enqueue_write      mean=167697 µs   p95=83010 µs
-    ↳ throughput ≈ 6.40 GiB/s
-GpuBuffer::new     mean=    6 µs   p95=    0 µs
-enqueue_read       mean=720311 µs   p95=720311 µs
-GPU allocations: 2   (2048 MiB)
-stencil OK for 16386×16386 grid.

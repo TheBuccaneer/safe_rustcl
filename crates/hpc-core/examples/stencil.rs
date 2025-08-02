@@ -98,6 +98,7 @@ fn main() -> Result<(), ClError> {
     flush_csv();
     #[cfg(feature = "metrics")]
     summary();
+    
 
     // 8) Verification
     for y in 1..height-1 {
