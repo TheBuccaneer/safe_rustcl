@@ -1,6 +1,6 @@
 // examples/bandwidth_optimized.rs  
-// 2025 - Optimierter Speicherbandbreiten-Test mit Out-of-Order Queue
-// Gleiche Struktur wie basic, aber mit Optimierungen
+// 2025 - optimized bandwith-Test mit Out-of-Order Queue
+// same structure as basic
 
 use bytemuck::{cast_slice, cast_slice_mut};
 use opencl3::{

@@ -1,6 +1,5 @@
 // examples/bandwidth_wrapper_fixed.rs
-// 2025 - Faire Bandwidth-Messung mit dem Safe-Wrapper
-// Buffer werden nur einmal allokiert, wie in der Raw-Version
+// 2025 - Fair bandwith with wrapper test
 
 use bytemuck::{cast_slice, cast_slice_mut};
 use hpc_core::{ClError, GpuBuffer, Queued, Ready};

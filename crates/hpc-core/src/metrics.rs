@@ -10,7 +10,7 @@ use std::{
     time::Instant,
 };
 
-/* ───────────── Roh‑Latenzen ─────────────────────────── */
+// Roh‑Latenzen
 
 static TIMES: Lazy<Mutex<Vec<(&'static str, u128)>>> =
     Lazy::new(|| Mutex::new(Vec::new()));
@@ -21,16 +21,14 @@ pub fn record(name: &'static str, start: Instant) {
     TIMES.lock().unwrap().push((name, dur));
 }
 
-/* ───────────── Buffer‑Allokationen ───────────────────── */
+// Buffer‑Allokationen
 
 pub static ALLOCS:      AtomicUsize = AtomicUsize::new(0);
 pub static ALLOC_BYTES: AtomicUsize = AtomicUsize::new(0);
 
-/* ───────────── Zusammenfassung ausgeben ─────────────── */
 
-/// Am Programmende aufrufen, z. B. in `main()`
 pub fn summary() {
-    /* API‑Latenzen gruppiert */
+    // API‑Latenzen hrouping
     let mut map: HashMap<&str, Vec<u128>> = HashMap::new();
     {
         let mut times = TIMES.lock().unwrap();
@@ -48,7 +46,7 @@ pub fn summary() {
     println!("{:<18} mean={:>5} µs   p95={:>5} µs", name, mean, p95);
 
     if name == "enqueue_write" {
-        // grober Durchsatz aus Gesamt-Bytes & Gesamt-Zeit
+        // Approximate throughput from total bytes & total time
         let total_us: u128 = v.iter().sum();
         let gbps = (crate::ALLOC_BYTES.load(Ordering::Relaxed) as f64)
                  / (total_us as f64) / 1e3; // GiB/s

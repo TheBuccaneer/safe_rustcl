@@ -1,5 +1,5 @@
-// Benchmark for Jacobi 4-point stencil – **fair comparison**
-// Beide Varianten allokieren Buffer pro Iteration
+// Benchmark for Jacobi 4-point stencil – fair comparison with buffer allocated in every iteration.
+// bench is buffer centric
 
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion, Throughput};
 use hpc_core::{GpuBuffer, Queued, Ready};
@@ -26,12 +26,9 @@ const N_ITERS: usize = 10;
 fn bench_stencil(c: &mut Criterion) {
     let mut g = c.benchmark_group("jacobi4");
 
-    // Korrigierte Throughput-Berechnung für 10 Iterationen
     g.throughput(Throughput::Bytes((NX * NY * 4 * 2 * N_ITERS) as u64));
 
-    // ============================================================================
-    // RAW VERSION - MIT Buffer-Allokation pro Iteration (wie Wrapper)
-    // ============================================================================
+    // Raw version with opencl3 
     g.bench_function("raw_jacobi_1024x1024_10iter_fair", |b| {
         b.iter_batched(
             || {
@@ -44,14 +41,14 @@ fn bench_stencil(c: &mut Criterion) {
                 let program  = Program::create_and_build_from_source(&ctx, src, "").unwrap();
                 let kern     = Kernel::create(&program, "jacobi").unwrap();
 
-                // Nur EINEN Buffer im Setup - wie beim Wrapper
+               
                 let mut buf_src = Buffer::<f32>::create(&ctx, CL_MEM_READ_WRITE, NX*NY, ptr::null_mut()).unwrap();
                 queue.enqueue_write_buffer(&mut buf_src, CL_BLOCKING, 0, cast_slice(&vec![1.0_f32; NX*NY]), &[]).unwrap();
                 
                 (ctx, queue, kern, buf_src)
             },
             |(ctx, queue, kern, mut src_buf)| {
-                // ✅ FAIRE VERSION: Neuer dst_buf in jeder Iteration
+                
                 for _ in 0..N_ITERS {
                     let mut dst_buf = Buffer::<f32>::create(&ctx, CL_MEM_READ_WRITE, NX*NY, ptr::null_mut()).unwrap();
                     
@@ -89,7 +86,6 @@ fn bench_stencil(c: &mut Criterion) {
                 let program  = Program::create_and_build_from_source(&context, src, "").unwrap();
                 let kern     = Kernel::create(&program, "jacobi").unwrap();
 
-                // Einen Ready-Buffer im Setup
                 let init = vec![1.0_f32; NX * NY];
                 let (ping_buf, g) = GpuBuffer::<Queued>::new(&context, N_BYTES).unwrap()
                     .enqueue_write(&queue, cast_slice(&init)).unwrap();
@@ -98,7 +94,7 @@ fn bench_stencil(c: &mut Criterion) {
                 (context, queue, kern, ping_ready)
             },
             |(context, queue, kern, mut ping)| {
-                // ✅ Wrapper allokiert bereits pro Iteration (unverändert)
+                
                 for _ in 0..N_ITERS {
                     let mut dst_if = GpuBuffer::<Queued>::new(&context, N_BYTES).unwrap().launch();
 

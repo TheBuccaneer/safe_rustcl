@@ -1,6 +1,6 @@
 // examples/bandwidth_basic.rs
-// 2025 - Einfacher Speicherbandbreiten-Test mit opencl3
-// Angepasst für faire Vergleichbarkeit mit Wrapper-Version
+// 2025 - simple memory bandwidth test with opencl3
+
 
 use bytemuck::{cast_slice, cast_slice_mut};
 use opencl3::{
@@ -15,14 +15,14 @@ use hpc_core::ClError;
 use std::{env, time::Instant, ptr};
 
 fn main() -> Result<(), ClError> {
-    // 1) OpenCL Setup
+    // a) OpenCL Setup
     let platform = get_platforms()?.remove(0);
     let device_id = platform.get_devices(CL_DEVICE_TYPE_GPU)?[0];
     let device = Device::new(device_id);
     let context = Context::from_device(&device)?;
     let queue = CommandQueue::create(&context, device.id(), CL_QUEUE_PROFILING_ENABLE)?;
 
-    // 2) Parameter - gleiche wie Wrapper
+    // b) Parameter 
     let args: Vec<String> = env::args().collect();
     let size_mb = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(512);
     let iterations = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(10);
@@ -37,7 +37,7 @@ fn main() -> Result<(), ClError> {
              size_mb, num_buffers, (chunk_bytes as f64) / (1024.0 * 1024.0));
     println!("  {} iterations", iterations);
 
-    // 3) Host data - gleiche Struktur wie Wrapper
+    // c) Host data - same structure as wrapper
     let mut host_data = vec![0.0f32; total_floats];
     let mut result_data = vec![0.0f32; total_floats];
     
@@ -45,7 +45,7 @@ fn main() -> Result<(), ClError> {
         host_data[i] = i as f32;
     }
 
-    // 4) GPU-Buffer nur einmal allokieren
+    // 4) GPU-Buffer allokation
     println!("Allocating {} GPU buffers...", num_buffers);
     let mut gpu_buffers: Vec<Buffer<f32>> = Vec::new();
     
@@ -78,7 +78,7 @@ fn main() -> Result<(), ClError> {
             events.push(evt);
         }
         
-        // Warten auf alle Transfers
+        // wait for other transfairs
         for evt in events {
             evt.wait()?;
         }
@@ -91,7 +91,7 @@ fn main() -> Result<(), ClError> {
         }
     }
 
-    // 6) D2H Benchmark - Buffer sind schon mit Daten gefüllt
+   
     println!("Preparing buffers for D2H test...");
     // Buffer sind bereits durch H2D-Test gefüllt
     println!("✓ Buffers ready for D2H");
@@ -117,7 +117,7 @@ fn main() -> Result<(), ClError> {
             events.push(evt);
         }
         
-        // Warten auf alle Transfers
+        // wait for another transfairs
         for evt in events {
             evt.wait()?;
         }

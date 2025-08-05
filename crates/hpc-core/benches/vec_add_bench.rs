@@ -1,3 +1,7 @@
+//benches vec_add example. Not used in work. Not up to date
+
+
+
 use criterion::{Criterion, criterion_group, BenchmarkId, criterion_main};
 use hpc_core::{ClError, GpuBuffer, Queued};
 use bytemuck::cast_slice;

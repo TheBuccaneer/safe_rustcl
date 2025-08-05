@@ -1,4 +1,6 @@
 //! src/memtracer.rs
+
+
 #![cfg(feature = "memtrace")]
 
 use once_cell::sync::Lazy;
@@ -9,7 +11,7 @@ use std::{
     time::Instant
 };
 
-/// Transfer‑Richtung oder Kernel‑Event
+/// Transfer direction or kernel event
 #[derive(Clone, Copy)]
 pub enum Dir { H2D, D2H, Kernel }
 impl Dir {
@@ -22,24 +24,24 @@ impl Dir {
     }
 }
 
-/// globaler Nullpunkt – wird beim ersten start() initialisiert
+/// global zero point – initialized on first start() call
 static T0: Lazy<Instant> = Lazy::new(Instant::now);
 
-/// Log‑Puffer: (start, end, bytes, dir, idle)
+/// Log buffer: (start, end, bytes, dir, idle)
 static LOG: Lazy<Mutex<Vec<(u128, u128, usize, &'static str, u128)>>> =
     Lazy::new(|| Mutex::new(Vec::new()));
 
-/// Global flag für automatisches Tracing
+/// Global flag for automatic tracing
 static AUTO_TRACE: AtomicBool = AtomicBool::new(true);
 
-/// Token hält Startzeit, Größe & Richtung
+/// Token holds start time, size & direction
 pub struct CopyToken {
     start: Instant,
     bytes: usize,
     dir: Dir,
 }
 
-/// Scoped guard für temporäre Tracing-Kontrolle
+/// Scoped guard for temporary tracing control
 pub struct TracingScope {
     prev_state: bool,
 }
@@ -62,35 +64,35 @@ impl Drop for TracingScope {
     }
 }
 
-/// Prüft ob Auto-Tracing aktiviert ist
+/// Checks if auto-tracing is enabled
 pub fn is_auto_trace_enabled() -> bool {
     AUTO_TRACE.load(Ordering::Relaxed)
 }
 
-/// Aktiviert Auto-Tracing global
+/// Enables auto-tracing
 pub fn enable_auto_trace() {
     AUTO_TRACE.store(true, Ordering::Relaxed);
 }
 
-/// Deaktiviert Auto-Tracing global
+/// Disables auto-tracing
 pub fn disable_auto_trace() {
     AUTO_TRACE.store(false, Ordering::Relaxed);
 }
 
-/// Start eines Transfers/Kernels – ruft Lazy::force(&T0) auf
+/// Start of a transfer/kernel – calls Lazy::force(&T0)
 pub fn start(dir: Dir, bytes: usize) -> CopyToken {
     Lazy::force(&T0);
     CopyToken { start: Instant::now(), bytes, dir }
 }
 
 impl CopyToken {
-    /// Ende eines Transfers/Kernels – schreibt eine Zeile mit idle_us
+    /// End of a transfer/kernel – writes a line with idle_us
     pub fn finish(self) {
         let t0 = *T0;
         let s  = self.start.duration_since(t0).as_micros();
         let e  = Instant::now().duration_since(t0).as_micros();
         
-        // Idle‑Time berechnen
+        // Idle time calculation
         let mut log = LOG.lock().unwrap();
         let prev_end = log.last().map(|entry| entry.1).unwrap_or(0);
         let idle = if s > prev_end { s - prev_end } else { 0 };
@@ -99,7 +101,7 @@ impl CopyToken {
     }
 }
 
-/// CSV schreiben – einmal am Programmende aufrufen
+/// Write CSV – call once at program end
 pub fn flush_csv() {
     let mut f = File::create("memtrace.csv").expect("konnte memtrace.csv nicht anlegen");
     writeln!(f, "t_start_us,t_end_us,bytes,dir,idle_us").unwrap();

@@ -1,4 +1,7 @@
-// ─── Feature‑Module ───────────────────────────────────────────────────
+// ─── experimental lib alternative. Not used in project so far
+
+
+
 #[cfg(feature = "metrics")]
 mod metrics;
 #[cfg(feature = "metrics")]
@@ -9,7 +12,7 @@ mod memtracer;
 #[cfg(feature = "memtrace")]
 pub use memtracer::{start, Dir, CopyToken, flush_csv, TracingScope, is_auto_trace_enabled, enable_auto_trace, disable_auto_trace};
 
-// ─── Extern‑Callback (nur für memtrace) ───────────────────────────────
+// Extern‑Callback (nur for memtrace) 
 #[cfg(feature = "memtrace")]
 use {
     opencl3::types::{cl_event, cl_int},
@@ -27,7 +30,7 @@ pub extern "C" fn memtrace_callback(
     tok.finish();
 }
 
-// ─── OpenCL / Std‑Imports ─────────────────────────────────────────────
+
 use opencl3::{
     context::Context,
     memory::{Buffer, CL_MEM_READ_WRITE},
@@ -44,7 +47,7 @@ use std::time::Instant;
 #[cfg(feature = "metrics")]
 use std::sync::atomic::Ordering;
 
-// ─── Fehler‑Typ & cl_try! ─────────────────────────────────────────────
+// Fehler‑Typ & cl_try! 
 #[derive(thiserror::Error, Debug)]
 pub enum ClError {
     #[error("OpenCL API error: {0}")]
@@ -78,7 +81,7 @@ impl From<i32> for ClError {
     }
 }
 
-// ─── Typ‑State‑Marker ────────────────────────────────────────────────
+// Typ‑State‑Marker ──
 mod sealed { 
     pub trait Sealed {} 
 }
@@ -98,16 +101,15 @@ pub struct Ready;
 impl sealed::Sealed for Ready  {}   
 impl State for Ready  {}
 
-// ─── GPU‑Buffer Wrapper ──────────────────────────────────────────────
+// GPU‑Buffer Wrapper
 
-/// **Performance**: repr(transparent) für zero-cost wrapping
 #[repr(transparent)]
 pub struct GpuBuffer<S> {
     inner: GpuBufferInner,
     _state: PhantomData<S>,
 }
 
-/// **Performance**: Interne Struktur optimiert für Cache-Locality
+
 #[repr(C)]
 struct GpuBufferInner {
     buf: Buffer<u8>,
@@ -137,7 +139,7 @@ impl<S> Drop for GpuBuffer<S> {
     }
 }
 
-// ── Queued ───────────────────────────────────────────────────────────
+// Queued 
 impl GpuBuffer<Queued> {
     /// **Performance**: Inline + Input-Validierung
     #[inline]
@@ -168,7 +170,7 @@ impl GpuBuffer<Queued> {
         })
     }
 
-    /// **Performance**: Convenience-Methode für häufigen Workflow
+
     #[inline]
     pub fn from_slice(ctx: &Context, queue: &CommandQueue, data: &[u8]) 
         -> Result<GpuBuffer<Ready>, ClError> {
@@ -177,7 +179,7 @@ impl GpuBuffer<Queued> {
         Ok(in_flight.into_ready(guard))
     }
 
-    /// **Performance**: Optimierte Write-Operation
+
     #[inline]
     pub fn enqueue_write(
         mut self,
@@ -252,7 +254,7 @@ impl GpuBuffer<Queued> {
     }
 }
 
-// ── Ready → Host (D2H) ───────────────────────────────────────────────
+// Ready → Host (D2H)
 impl GpuBuffer<Ready> {
     /// **Performance**: Optimierte Read-Operation
     #[inline]
@@ -310,7 +312,7 @@ impl GpuBuffer<Ready> {
     }
 }
 
-// ── InFlight ─────────────────────────────────────────────────────────
+// InFlight
 impl GpuBuffer<InFlight> {
     /// **Performance**: Deprecated - verwende into_ready(guard)
     #[inline]
@@ -356,7 +358,7 @@ impl GpuBuffer<InFlight> {
     }
 }
 
-// ── Accessors (alle States) ──────────────────────────────────────────
+// Accessors (alle States)
 impl<S> GpuBuffer<S> {
     /// **Performance**: Direct buffer access ohne Overhead
     #[inline(always)]
@@ -380,7 +382,7 @@ impl<S> GpuBuffer<S> {
     }
 }
 
-// ── Guard (wartet bei Drop auf Event) ────────────────────────────────
+//Guard (wartet bei Drop auf Event)
 pub struct GpuEventGuard { 
     evt: Event 
 }
@@ -412,7 +414,7 @@ impl GpuEventGuard {
 #[cfg(feature = "metrics")]
 pub use metrics::{ALLOCS, ALLOC_BYTES};
 
-// ─── Buffer Pool für High-Performance Use Cases ──────────────────────
+// Buffer Pool für High-Performance Use Cases
 use std::collections::HashMap;
 
 /// **Performance**: Buffer Pool für Recycling

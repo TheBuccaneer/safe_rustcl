@@ -1,4 +1,4 @@
-// ─── Feature‑Module ───────────────────────────────────────────────────
+// Feature‑Module
 #[cfg(feature = "metrics")]
 mod metrics;
 #[cfg(feature = "metrics")]
@@ -9,7 +9,7 @@ mod memtracer;
 #[cfg(feature = "memtrace")]
 pub use memtracer::{start, Dir, CopyToken, flush_csv, TracingScope, is_auto_trace_enabled, enable_auto_trace, disable_auto_trace};
 
-// ─── Extern‑Callback (nur für memtrace) ───────────────────────────────
+// Extern‑Callback (nur für memtrace)
 #[cfg(feature = "memtrace")]
 use {
     opencl3::types::{cl_event, cl_int},
@@ -27,7 +27,7 @@ pub extern "C" fn memtrace_callback(
     tok.finish();
 }
 
-// ─── OpenCL / Std‑Imports ─────────────────────────────────────────────
+// OpenCL / Std‑Imports
 use opencl3::{
     context::Context,
     memory::{Buffer, CL_MEM_READ_WRITE},
@@ -44,7 +44,7 @@ use std::time::Instant;
 #[cfg(feature = "metrics")]
 use std::sync::atomic::Ordering;
 
-// ─── Fehler‑Typ & cl_try! ─────────────────────────────────────────────
+// Fehler‑Typ & cl_try!
 #[derive(thiserror::Error, Debug)]
 pub enum ClError {
     #[error("OpenCL error code {0}")]
@@ -68,7 +68,7 @@ impl From<i32> for ClError {
     fn from(code: i32) -> Self { ClError::Api(code) }
 }
 
-// ─── Typ‑State‑Marker ────────────────────────────────────────────────
+// Typ‑State‑Marker 
 mod sealed { pub trait Sealed {} }
 pub trait State: sealed::Sealed {}
 
@@ -76,7 +76,7 @@ pub struct Queued;   impl sealed::Sealed for Queued {}   impl State for Queued {
 pub struct InFlight; impl sealed::Sealed for InFlight {} impl State for InFlight {}
 pub struct Ready;    impl sealed::Sealed for Ready  {}   impl State for Ready  {}
 
-// ─── GPU‑Buffer Wrapper ──────────────────────────────────────────────
+//  GPU‑Buffer Wrapper 
 
 pub struct GpuBuffer<S> {
     buf: Buffer<u8>,
@@ -84,11 +84,11 @@ pub struct GpuBuffer<S> {
     _state: PhantomData<S>,
 }
 
-// ── Queued ───────────────────────────────────────────────────────────
+// Queued 
 impl GpuBuffer<Queued> {
     
     pub fn new(ctx: &Context, len: usize) -> Result<Self, ClError> {
-        // **Allocation‑Zähler** (neu)
+
         #[cfg(feature = "metrics")]
         {
             ALLOCS.fetch_add(1, Ordering::Relaxed);
@@ -161,7 +161,7 @@ impl GpuBuffer<Queued> {
     }
 }
 
-// ── Ready → Host (D2H) ───────────────────────────────────────────────
+// Ready → Host (D2H)
 impl GpuBuffer<Ready> {
 
     pub fn enqueue_read(
@@ -214,7 +214,7 @@ impl GpuBuffer<Ready> {
     }
 }
 
-// ── InFlight ─────────────────────────────────────────────────────────
+// InFlight 
 impl GpuBuffer<InFlight> {
    
     pub fn complete(self, evt: Event) -> GpuBuffer<Ready> {
@@ -229,7 +229,7 @@ impl GpuBuffer<InFlight> {
     }
 }
 
-// ── Accessors (alle States) ──────────────────────────────────────────
+// Accessors (alle States) 
 impl<S> GpuBuffer<S> {
     
     pub fn raw(&self) -> &Buffer<u8> { &self.buf }
@@ -239,13 +239,13 @@ impl<S> GpuBuffer<S> {
     pub fn len(&self) -> usize { self.len }
 }
 
-// ── Guard (wartet bei Drop auf Event) ────────────────────────────────
+// Guard (wartet bei Drop auf Event) 
 pub struct GpuEventGuard { evt: Event }
 impl Drop for GpuEventGuard {
    
     fn drop(&mut self) { let _ = self.evt.wait(); }
 }
 
-// **Neu**: Re-Export für Allocation‑Zähler
+// **Neu**: Re-Export 
 #[cfg(feature = "metrics")]
 pub use metrics::{ALLOCS, ALLOC_BYTES};
