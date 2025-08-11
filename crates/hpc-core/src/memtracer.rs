@@ -1,111 +1,236 @@
-//! src/memtracer.rs
-
-
+//! src/memtracer.rs – kombiniert CopyToken + Abort-Token + alte API-Shims
 #![cfg(feature = "memtrace")]
 
 use once_cell::sync::Lazy;
 use std::{
-    fs::File, 
-    io::Write, 
-    sync::{Mutex, atomic::{AtomicBool, Ordering}}, 
-    time::Instant
+    fs::File,
+    io::Write,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    },
+    time::Instant,
 };
 
-/// Transfer direction or kernel event
-#[derive(Clone, Copy)]
-pub enum Dir { H2D, D2H, Kernel }
+/// Richtung/Typ
+#[derive(Clone, Copy, Debug)]
+pub enum Dir {
+    H2D,
+    D2H,
+    Kernel,
+}
 impl Dir {
-    fn as_str(self) -> &'static str {
+    #[inline]
+    pub fn as_str(self) -> &'static str {
         match self {
-            Dir::H2D    => "H2D",
-            Dir::D2H    => "D2H",
-            Dir::Kernel => "Kernel",
+            Dir::H2D => "H2D",
+            Dir::D2H => "D2H",
+            Dir::Kernel => "KRN",
         }
     }
 }
 
-/// global zero point – initialized on first start() call
+/// T0 für relative Zeitstempel
 static T0: Lazy<Instant> = Lazy::new(Instant::now);
 
-/// Log buffer: (start, end, bytes, dir, idle)
-static LOG: Lazy<Mutex<Vec<(u128, u128, usize, &'static str, u128)>>> =
-    Lazy::new(|| Mutex::new(Vec::new()));
-
-/// Global flag for automatic tracing
+/// Auto-Trace
 static AUTO_TRACE: AtomicBool = AtomicBool::new(true);
-
-/// Token holds start time, size & direction
-pub struct CopyToken {
-    start: Instant,
-    bytes: usize,
-    dir: Dir,
+#[inline]
+pub fn enable_auto_trace() {
+    AUTO_TRACE.store(true, Ordering::Relaxed);
 }
-
-/// Scoped guard for temporary tracing control
-pub struct TracingScope {
-    prev_state: bool,
+#[inline]
+pub fn disable_auto_trace() {
+    AUTO_TRACE.store(false, Ordering::Relaxed);
 }
-
-impl TracingScope {
-    pub fn disabled() -> Self {
-        let prev_state = AUTO_TRACE.swap(false, Ordering::Relaxed);
-        Self { prev_state }
-    }
-    
-    pub fn enabled() -> Self {
-        let prev_state = AUTO_TRACE.swap(true, Ordering::Relaxed);
-        Self { prev_state }
-    }
-}
-
-impl Drop for TracingScope {
-    fn drop(&mut self) {
-        AUTO_TRACE.store(self.prev_state, Ordering::Relaxed);
-    }
-}
-
-/// Checks if auto-tracing is enabled
+#[inline]
 pub fn is_auto_trace_enabled() -> bool {
     AUTO_TRACE.load(Ordering::Relaxed)
 }
 
-/// Enables auto-tracing
-pub fn enable_auto_trace() {
-    AUTO_TRACE.store(true, Ordering::Relaxed);
+/// Aktueller Abort-Token
+static CURRENT_ABORT: Lazy<Mutex<Option<String>>> = Lazy::new(|| Mutex::new(None));
+#[inline]
+pub fn set_abort_token<S: Into<String>>(token: S) {
+    *CURRENT_ABORT.lock().unwrap() = Some(token.into());
 }
-
-/// Disables auto-tracing
-pub fn disable_auto_trace() {
-    AUTO_TRACE.store(false, Ordering::Relaxed);
+#[inline]
+pub fn clear_abort_token() {
+    *CURRENT_ABORT.lock().unwrap() = None;
 }
-
-/// Start of a transfer/kernel – calls Lazy::force(&T0)
-pub fn start(dir: Dir, bytes: usize) -> CopyToken {
-    Lazy::force(&T0);
-    CopyToken { start: Instant::now(), bytes, dir }
+pub struct AbortTokenGuard(Option<String>);
+impl AbortTokenGuard {
+    #[inline]
+    pub fn new<S: Into<String>>(token: S) -> Self {
+        let mut lock = CURRENT_ABORT.lock().unwrap();
+        let prev = lock.take();
+        *lock = Some(token.into());
+        AbortTokenGuard(prev)
+    }
 }
-
-impl CopyToken {
-    /// End of a transfer/kernel – writes a line with idle_us
-    pub fn finish(self) {
-        let t0 = *T0;
-        let s  = self.start.duration_since(t0).as_micros();
-        let e  = Instant::now().duration_since(t0).as_micros();
-        
-        // Idle time calculation
-        let mut log = LOG.lock().unwrap();
-        let prev_end = log.last().map(|entry| entry.1).unwrap_or(0);
-        let idle = if s > prev_end { s - prev_end } else { 0 };
-        
-        log.push((s, e, self.bytes, self.dir.as_str(), idle));
+impl Drop for AbortTokenGuard {
+    fn drop(&mut self) {
+        let mut lock = CURRENT_ABORT.lock().unwrap();
+        *lock = self.0.take();
     }
 }
 
-/// Write CSV – call once at program end
+/// Ein Log-Eintrag
+#[derive(Debug)]
+struct Record {
+    t_start_us: u64,
+    t_end_us: u64,
+    bytes: usize,
+    dir: Dir,
+    idle_us: u64,
+    abort_token: Option<String>,
+}
+
+/// Zentrales Log
+static LOG: Lazy<Mutex<Vec<Record>>> = Lazy::new(|| Mutex::new(Vec::with_capacity(4096)));
+
+/// Copy-/Kernel-Token – loggt bei `finish()` oder `Drop`
+pub struct CopyToken {
+    start: Instant,
+    bytes: usize,
+    dir: Dir,
+    finished: bool,
+}
+impl CopyToken {
+    /// Konsumierendes Finish (kompatibel zu `Box<CopyToken>.finish()`).
+    pub fn finish(mut self) {
+        if !AUTO_TRACE.load(Ordering::Relaxed) {
+            self.finished = true;
+            return;
+        }
+        self.log_once();
+    }
+
+    #[inline]
+    fn log_once(&mut self) {
+        if self.finished {
+            return;
+        }
+        let s = self.start.duration_since(*T0).as_micros() as u64;
+        let e = Instant::now().duration_since(*T0).as_micros() as u64;
+
+        let mut log = LOG.lock().unwrap();
+        let prev_end = log.last().map(|r| r.t_end_us).unwrap_or(0);
+        let idle = if s > prev_end { s - prev_end } else { 0 };
+        let abort = CURRENT_ABORT.lock().unwrap().clone();
+
+        log.push(Record {
+            t_start_us: s,
+            t_end_us: e,
+            bytes: self.bytes,
+            dir: self.dir,
+            idle_us: idle,
+            abort_token: abort,
+        });
+
+        self.finished = true;
+    }
+}
+impl Drop for CopyToken {
+    fn drop(&mut self) {
+        if AUTO_TRACE.load(Ordering::Relaxed) {
+            self.log_once();
+        } else {
+            self.finished = true;
+        }
+    }
+}
+
+/// Start eines Transfers/Kernels – gibt Token zurück
+#[inline]
+pub fn start(dir: Dir, bytes: usize) -> CopyToken {
+    Lazy::force(&T0);
+    CopyToken {
+        start: Instant::now(),
+        bytes,
+        dir,
+        finished: false,
+    }
+}
+
+/// Direkte Logging-API (extern gemessene Zeitpunkte)
+#[inline]
+pub fn log_transfer(t_start_us: u64, t_end_us: u64, bytes: usize, dir: Dir) {
+    if !AUTO_TRACE.load(Ordering::Relaxed) {
+        return;
+    }
+    let mut log = LOG.lock().unwrap();
+    let prev_end = log.last().map(|r| r.t_end_us).unwrap_or(0);
+    let idle = if t_start_us > prev_end {
+        t_start_us - prev_end
+    } else {
+        0
+    };
+    let abort = CURRENT_ABORT.lock().unwrap().clone();
+
+    log.push(Record {
+        t_start_us,
+        t_end_us,
+        bytes,
+        dir,
+        idle_us: idle,
+        abort_token: abort,
+    });
+}
+
+/// CSV schreiben
 pub fn flush_csv() {
+    let log = LOG.lock().unwrap();
     let mut f = File::create("memtrace.csv").expect("konnte memtrace.csv nicht anlegen");
-    writeln!(f, "t_start_us,t_end_us,bytes,dir,idle_us").unwrap();
-    for (s, e, b, d, idle) in LOG.lock().unwrap().iter() {
-        writeln!(f, "{},{},{},{},{}", s, e, b, d, idle).unwrap();
+    writeln!(f, "t_start_us,t_end_us,bytes,dir,idle_us,abort_token").unwrap();
+    for r in log.iter() {
+        writeln!(
+            f,
+            "{},{},{},{},{},{}",
+            r.t_start_us,
+            r.t_end_us,
+            r.bytes,
+            r.dir.as_str(),
+            r.idle_us,
+            r.abort_token.as_deref().unwrap_or("")
+        )
+        .unwrap();
+    }
+}
+
+/// Log leeren
+#[inline]
+pub fn reset() {
+    LOG.lock().unwrap().clear();
+}
+
+/// Kompatibler RAII-Scope (stellt vorherigen Auto-Trace-Zustand bei Drop wieder her)
+pub struct TracingScope {
+    prev: bool,
+}
+impl TracingScope {
+    #[inline]
+    pub fn new(enable: bool) -> Self {
+        let prev = is_auto_trace_enabled();
+        if enable {
+            enable_auto_trace();
+        } else {
+            disable_auto_trace();
+        }
+        TracingScope { prev }
+    }
+}
+impl Default for TracingScope {
+    fn default() -> Self {
+        TracingScope { prev: is_auto_trace_enabled() }
+    }
+}
+impl Drop for TracingScope {
+    fn drop(&mut self) {
+        if self.prev {
+            enable_auto_trace();
+        } else {
+            disable_auto_trace();
+        }
     }
 }

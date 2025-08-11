@@ -5,7 +5,7 @@ mod metrics;
 pub use metrics::*;
 
 #[cfg(feature = "memtrace")]
-mod memtracer;
+pub mod memtracer;
 #[cfg(feature = "memtrace")]
 pub use memtracer::{start, Dir, CopyToken, flush_csv, TracingScope, is_auto_trace_enabled, enable_auto_trace, disable_auto_trace};
 
