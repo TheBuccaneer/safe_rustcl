@@ -112,7 +112,7 @@ impl GpuBuffer<Queued> {
         queue: &CommandQueue,
         host: &[u8],
     ) -> Result<(GpuBuffer<InFlight>, GpuEventGuard), ClError> {
-
+        assert_eq!(host.len(), self.len, "Buffer size mismatch");
         #[cfg(feature="metrics")]
         let t = Instant::now();
 
@@ -245,7 +245,3 @@ impl Drop for GpuEventGuard {
    
     fn drop(&mut self) { let _ = self.evt.wait(); }
 }
-
-// **Neu**: Re-Export 
-#[cfg(feature = "metrics")]
-pub use metrics::{ALLOCS, ALLOC_BYTES};

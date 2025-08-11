@@ -53,7 +53,7 @@ fn main() -> Result<(), ClError> {
     let tok_h2d = trace_start(Dir::H2D, size_bytes * 2);
     
     #[cfg(feature = "memtrace")]
-    let _scope = TracingScope::disabled(); // Deaktiviere Auto-Tracing temporär
+    let _scope = TracingScope::new(false);
     
     let (si, gi) = src_dev.enqueue_write(&queue, cast_slice(&h_src))?;
     src_ready = si.into_ready(gi);
