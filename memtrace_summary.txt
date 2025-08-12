@@ -1,0 +1,5 @@
+events_total: 4
+idle_total_us: 40
+bytes_h2d: 1024
+bytes_d2h: 2048
+aborts: 1

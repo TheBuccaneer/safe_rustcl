@@ -1,2 +1,0 @@
-t_start_us,t_end_us,bytes,dir,idle_us,abort_token,phase,tx_id,cause,retries,conflict_sz
-20501,20601,0,KRN,1,,Abort,1,test_conflict,2,64

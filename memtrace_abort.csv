@@ -1,2 +1,2 @@
-t_start_us,t_end_us,tx_id,cause,retries,conflict_sz,idle_us,abort_token
-20094,20194,1,test_conflict,2,64,1,
+abort_token,cause,count,retries_avg,conflict_avg,conflict_min,conflict_max,first_us,last_us
+,test_conflict,1,2.000,64.000,64,64,21016,21116

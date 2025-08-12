@@ -1,4 +1,4 @@
 t_start_us,t_end_us,bytes,dir,idle_us,abort_token,phase
-0,3,1024,H2D,0,,Transfer
-27,15057,2048,D2H,24,permanent-123,Transfer
-15069,20093,4096,KRN,12,guarded-XYZ,Kernel
+0,2,1024,H2D,0,,Transfer
+27,15513,2048,D2H,25,permanent-123,Transfer
+15525,21013,4096,Kernel,12,guarded-XYZ,Kernel

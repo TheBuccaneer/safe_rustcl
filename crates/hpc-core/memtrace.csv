@@ -1,4 +1,0 @@
-t_start_us,t_end_us,bytes,dir,idle_us,abort_token,phase,tx_id,cause,retries,conflict_sz
-0,2,1024,H2D,0,,Transfer,,,,
-27,15459,2048,D2H,25,permanent-123,Transfer,,,,
-15477,20500,4096,KRN,18,guarded-XYZ,Kernel,,,,
