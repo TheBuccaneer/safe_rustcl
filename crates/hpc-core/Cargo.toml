@@ -21,15 +21,11 @@ name = "stencil_bench"
 harness = false
 
 
-[build]
-rustflags = ["-Clink-arg=-Wl,-z,relro,-z,now"] # z.B. für reproducible builds
-
-
-
 [features]
 default = []
 metrics = []
 memtrace = []
+memtrace_full = ["memtrace"]   # <— neu: Alias für cfg(feature="memtrace_full")
 
 [[example]]
 name = "bandwidth_basic"

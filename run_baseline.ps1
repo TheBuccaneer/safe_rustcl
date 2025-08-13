@@ -37,6 +37,11 @@ foreach ($c in $Conflicts) {
 
     Move-Item -LiteralPath $abort -Destination (Join-Path $dest 'memtrace_abort.csv') -Force
     Move-Item -LiteralPath $sum   -Destination (Join-Path $dest 'memtrace_summary.txt') -Force
+
+    $events = Join-Path $Root 'memtrace.csv'
+if (Test-Path $events) {
+  Move-Item -LiteralPath $events -Destination (Join-Path $dest 'memtrace_events.csv') -Force
+}
   }
 }
 
@@ -47,3 +52,22 @@ Get-ChildItem $OutRoot -Recurse -Filter memtrace_summary.txt |
     $ab=(Select-String -Path $_.FullName -Pattern 'aborts:\s*(\d+)').Matches[0].Groups[1].Value
     "$($_.DirectoryName)`t$ev`t$ab"
   } | Set-Content (Join-Path $OutRoot 'summary_matrix.tsv')
+
+
+# --- robuste Rate-Tabelle ---
+$OPS = 1000000
+$rows = @()
+
+Get-ChildItem $OutRoot -Recurse -Filter memtrace_summary.txt | ForEach-Object {
+  $leaf = Split-Path $_.DirectoryName -Leaf
+  if ($leaf -notmatch '^t(\d+)$') { return }      # nur Verzeichnisse t2,t4,t8,...
+  $t = [int]$Matches[1]
+  $c = Split-Path (Split-Path $_.DirectoryName -Parent) -Leaf
+  $ev = [double]((Select-String $_.FullName -Pattern 'events_total:\s*(\d+)').Matches[0].Groups[1].Value)
+  $ab = [double]((Select-String $_.FullName -Pattern 'aborts:\s*(\d+)').Matches[0].Groups[1].Value)
+  $rows += [pscustomobject]@{ conflict=$c; threads=$t; events=$ev; aborts=$ab; rate=($ab/$OPS) }
+}
+
+$rows | Sort-Object conflict,threads |
+  ForEach-Object { "{0}`t{1}`t{2}`t{3}`t{4:N6}" -f $_.conflict,$_.threads,$_.events,$_.aborts,$_.rate } |
+  Set-Content (Join-Path $OutRoot 'summary_rates.tsv')

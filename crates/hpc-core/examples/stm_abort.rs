@@ -127,7 +127,7 @@ fn main() {
     eprintln!("memtrace: ENABLED");
     #[cfg(not(feature="memtrace"))]
     eprintln!("memtrace: DISABLED");
-    
+
     let cfg = parse_args();
 
     // Konfliktwahrscheinlichkeit grob (feintuning später)
@@ -187,6 +187,10 @@ fn main() {
             // synchroner Start
             barrier.wait();
 
+            // Fortschritt
+            let mut done: u64 = 0;
+            let mut last = Instant::now();
+
             match local_mode {
                 Mode::Ops(ops) => {
                     for _ in 0..ops {
@@ -210,6 +214,13 @@ fn main() {
                         } else {
                             commits.fetch_add(1, Ordering::Relaxed);
                         }
+
+                        // Fortschritt ausgeben (ca. 1×/s)
+                        done += 1;
+                        if last.elapsed().as_secs() >= 1 {
+                            eprintln!("progress tid={} done={}", tid, done);
+                            last = Instant::now();
+                        }
                     }
                 }
                 Mode::Duration(_) => {
@@ -222,11 +233,16 @@ fn main() {
                             spin_for_ns(10_000 + ((tid as u64) * 1_000));
 
                             #[cfg(feature = "memtrace")]
-                            hpc_core::memtracer::trace_abort(
-                                0, "conflict", 1, 1, "stm",
-                            );
+                            hpc_core::memtracer::trace_abort(0, "conflict", 1, 1, "stm");
                         } else {
                             commits.fetch_add(1, Ordering::Relaxed);
+                        }
+
+                        // Fortschritt ausgeben (ca. 1×/s)
+                        done += 1;
+                        if last.elapsed().as_secs() >= 1 {
+                            eprintln!("progress tid={} done={}", tid, done);
+                            last = Instant::now();
                         }
                     }
                 }
@@ -262,6 +278,7 @@ fn main() {
         println!("memtrace.csv / memtrace_summary.txt geschrieben (falls Events vorhanden).");
     }
 }
+
 
 // sehr kleiner, portabler Busy-Wait (für deterministische Mikro-Sleeps)
 #[inline(always)]

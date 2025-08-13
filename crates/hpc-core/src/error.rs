@@ -31,6 +31,7 @@ macro_rules! cl_try {
 }
 
 // Re-export for backwards compatibility
+#[allow(unused_imports)]
 pub(crate) use cl_try;
 
 impl From<opencl3::error_codes::ClError> for ClError {
