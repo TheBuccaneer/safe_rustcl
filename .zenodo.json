@@ -1,0 +1,8 @@
+{
+  "title": "SafeRustCL v0.1.0",
+  "upload_type": "software",
+  "description": "Artifact and results (FGOS_Ubuntu).",
+  "creators": [{"name": "Tihomir Thomas, Bicanic", "affiliation": "University of Trier"}],
+  "access_right": "open",
+  "license": "Apache-2.0"
+}

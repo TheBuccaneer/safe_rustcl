@@ -1,0 +1,60 @@
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=2 done=238061
+progress tid=1 done=246330
+progress tid=3 done=230266
+1.11
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=2 done=238017
+progress tid=3 done=230231
+progress tid=1 done=246422
+1.11
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=2 done=237957
+progress tid=1 done=246418
+progress tid=3 done=230483
+1.10
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=3 done=230530
+progress tid=1 done=246384
+progress tid=2 done=238167
+1.10
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=3 done=230430
+progress tid=1 done=246568
+progress tid=2 done=238040
+1.10
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=1 done=246179
+progress tid=3 done=230508
+progress tid=2 done=237817
+1.10
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=2 done=237999
+progress tid=3 done=230478
+progress tid=1 done=246484
+1.10
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=2 done=238039
+progress tid=3 done=230385
+progress tid=1 done=246550
+1.10
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=1 done=246532
+progress tid=3 done=230639
+progress tid=2 done=238131
+1.10
+memtrace: ENABLED
+stm_abort: threads=4, conflict=Med, mode=Ops(1000000), seed=1
+progress tid=1 done=246226
+progress tid=2 done=238057
+progress tid=3 done=230434
+1.11

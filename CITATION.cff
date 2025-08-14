@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "SafeRustCL: Typestate-Checked OpenCL for Rust"
+message: "Please cite this software."
+authors:
+  - family-names: "Bicanic"
+    given-names: "Tihomir Thomas"
+license: "Apache-2.0"
+repository-code: "https://github.com/TheBuccaneer/safe_rustcl/tree/nextstepaudio"
+version: "v0.1.0"
+date-released: "2025-08-14"

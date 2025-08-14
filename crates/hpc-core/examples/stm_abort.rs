@@ -5,7 +5,6 @@
 // Default: --ops 1_000_000. Bei Angabe beider gewinnt --ops.
 // Aborts werden optional via feature "memtrace" geloggt.
 
-use std::env;
 use std::str::FromStr;
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
@@ -46,48 +45,35 @@ struct Config {
     conflict: Conflict,
     mode: Mode,
     seed: u64,
+    progress: bool 
 }
 
 fn parse_args() -> Config {
-    let mut threads = 4usize;
+    let mut threads: usize = 4;
     let mut conflict = Conflict::Low;
     let mut duration_s: Option<u64> = None;
     let mut ops: Option<u64> = None;
-    let mut seed = 1u64;
+    let mut seed: u64 = 1;
+    let mut progress: bool = false;
 
-    let mut args = env::args().skip(1);
+    let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--threads" => {
-                if let Some(v) = args.next() {
-                    threads = v.parse().unwrap_or(4);
-                }
-            }
-            "--conflict" => {
-                if let Some(v) = args.next() {
-                    conflict = v.parse().unwrap_or(Conflict::Low);
-                }
-            }
-            "--duration" => {
-                if let Some(v) = args.next() {
-                    duration_s = v.parse().ok();
-                }
-            }
-            "--ops" => {
-                if let Some(v) = args.next() {
-                    ops = v.parse().ok();
-                }
-            }
-            "--seed" => {
-                if let Some(v) = args.next() {
-                    seed = v.parse().unwrap_or(1);
-                }
-            }
+            "--threads" => if let Some(v) = args.next() { threads = v.parse().unwrap_or(4); },
+            "--conflict" => if let Some(v) = args.next() { conflict = v.parse().unwrap_or(Conflict::Low); },
+            "--duration" => if let Some(v) = args.next() { duration_s = v.parse().ok(); },
+            "--ops"      => if let Some(v) = args.next() { ops = v.parse().ok(); },
+            "--seed"     => if let Some(v) = args.next() { seed = v.parse().unwrap_or(1); },
+            "--progress" => { progress = true; },
             _ => {}
         }
     }
 
-    // Priorität: ops > duration > default ops
+    if ops.is_some() && duration_s.is_some() {
+        eprintln!("error: --ops und --duration sind exklusiv");
+        std::process::exit(2);
+    }
+
     let mode = if let Some(n) = ops {
         Mode::Ops(n.max(1))
     } else if let Some(s) = duration_s {
@@ -96,7 +82,7 @@ fn parse_args() -> Config {
         Mode::Ops(1_000_000)
     };
 
-    Config { threads, conflict, mode, seed }
+    Config { threads, conflict, mode, seed, progress }
 }
 
 // ---- sehr einfacher, deterministischer PRNG ----
@@ -183,6 +169,8 @@ fn main() {
             ^ 0x9E37_79B9_7F4A_7C15u64;
         let mut rng = XorShift64::new(thread_seed);
 
+        let progress = cfg.progress;
+
         let h = thread::spawn(move || {
             // synchroner Start
             barrier.wait();
@@ -217,7 +205,7 @@ fn main() {
 
                         // Fortschritt ausgeben (ca. 1×/s)
                         done += 1;
-                        if last.elapsed().as_secs() >= 1 {
+                        if progress && last.elapsed().as_secs() >= 1 {
                             eprintln!("progress tid={} done={}", tid, done);
                             last = Instant::now();
                         }
@@ -240,10 +228,10 @@ fn main() {
 
                         // Fortschritt ausgeben (ca. 1×/s)
                         done += 1;
-                        if last.elapsed().as_secs() >= 1 {
+                        if progress && last.elapsed().as_secs() >= 1 {
                             eprintln!("progress tid={} done={}", tid, done);
                             last = Instant::now();
-                        }
+    }
                     }
                 }
             }

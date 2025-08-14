@@ -1,0 +1,14 @@
+Kurzcheck FGOS_ubuntu.zip:
+
+9/9 Läufe vorhanden (t={2,4,8} × {low,med,high}).
+
+In allen: events_total = aborts, bytes_h2d=d2h=0, idle_total_us=0.
+
+Abortraten (pro 1e6 Ops):
+• low: t2 0.019825, t4 0.019734, t8 0.019831
+• med: t2 0.149853, t4 0.149478, t8 0.149181
+• high: t2 0.400136, t4 0.399961, t8 0.399408
+
+memtrace_events.csv ist in allen 9 Läufen vorhanden.
+
+Fazit: Ubuntu reproduziert die Windows-Baseline 1:1.
